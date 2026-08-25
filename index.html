@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abans Tender Reading Management</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="abans-theme.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">A</div><div><strong>ABANS COMPUTER</strong><span>Corporate Sales Division</span></div></div>
+  <nav class="app-title"><a class="nav-link active" href="index.html"><span>＋</span> Tender Entry</a><a class="nav-link" href="basic-report.html"><span>▦</span> Tender Records</a></nav>
+  </header>
+
+  <main>
+    <section class="card details-card">
+      <div class="section-heading"><div><p class="eyebrow">Tender Information</p><h1>Create tender comparison</h1></div><div class="title-actions"><button id="newEntry" class="button secondary">New Entry / Clear Form</button><button id="loadMatale" class="button secondary">Load General Hospital–Matale</button><span class="badge">Draft</span></div></div>
+      <div class="details-grid">
+        <label>Customer Name<input id="customerName" placeholder="Enter customer / organization name" /></label>
+        <label>Account Holder Name<input id="accountHolderName" list="accountHolders" placeholder="Select or enter account holder name" /></label>
+        <label>Closing Date<input id="closingDate" type="date" /></label>
+        <label>Total Quantity<input id="totalQty" type="number" min="0" value="0" readonly /></label>
+      </div>
+      <datalist id="accountHolders"><option value="Monique"></option><option value="Mahesh"></option><option value="Vithushan"></option><option value="Keshan"></option><option value="Sathsara"></option><option value="Kanchana"></option><option value="Dinith"></option><option value="Yoshitha"></option><option value="Harsha"></option><option value="Sanula"></option><option value="Lasitha"></option><option value="Humaid"></option><option value="Thilini"></option></datalist>
+      <div class="cloud-actions"><span id="cloudStatus" class="cloud-status">Saved locally for 2 hours</span><div><button id="saveDraft" class="button secondary">Save Temporary Draft</button><button id="saveFinal" class="button primary">Save Final Tender</button></div></div>
+    </section>
+
+
+    <section class="items-panel">
+      <div class="panel-title"><div><p class="eyebrow">Tender Items</p><h2>Items & specifications</h2><p>Add up to 20 items. Each item can be compared independently.</p></div><button id="addItem" class="button primary">+ Add Item</button></div>
+      <div id="items"></div>
+      <div id="emptyState" class="empty"><div>▣</div><h3>No items added yet</h3><p>Start by adding the first tender item.</p></div>
+    </section>
+
+    <section class="result-card card" id="resultSection">
+      <div class="section-heading"><div><p class="eyebrow">Tender Result</p><h2>Lowest to highest quotation</h2></div><button id="generateImage" class="button secondary">Generate Image</button></div>
+      <div id="resultEmpty" class="empty compact"><p>Add items and bidder prices to see the comparison.</p></div>
+      <div id="results"></div>
+    </section>
+  </main>
+  <template id="itemTemplate">
+    <article class="item-card">
+      <div class="item-header"><div class="item-number"></div><input class="item-name" placeholder="Item name (e.g. Laptop)" /><div class="header-actions"><label class="inline-qty">Qty <input class="item-qty" type="number" min="0" value="1" /></label><button class="icon-button remove-item" title="Remove item">×</button></div></div>
+      <div class="item-content">
+        <div class="specs"><h3>Specifications</h3><div class="spec-grid">
+<label>Category<select class="category"><option value="Laptop">Laptop</option><option value="Tab">Tab</option><option value="Desktop">Desktop</option><option value="AIO">AIO (All-in-One PC)</option><option value="Smart Board">Smart Board</option><option value="UPS">UPS</option><option value="Quote Model">Quote Model</option></select></label>
+          <label>Quoted Model<input class="model" placeholder="Model number" /></label>
+          <label>Processor<input class="processor" placeholder="e.g. Intel Core i5" /></label>
+          <label>RAM<input class="ram" placeholder="e.g. 16 GB" /></label>
+          <label>Storage<input class="storage" placeholder="e.g. 512 GB SSD" /></label>
+          <label>Display / Monitor<input class="display" placeholder="e.g. 15.6 inch FHD" /></label>
+          <label>Warranty<input class="warranty" placeholder="e.g. 3 Years" /></label>
+        </div></div>
+        <div class="price-block abans-block"><div class="subheading"><h3>Abans Quotation</h3><span>Internal</span></div><div class="price-grid two-columns"><label>Unit Price<input class="abans-unit" type="number" min="0" step="0.01" placeholder="0.00" /></label><label>Total Price<input class="abans-total" type="number" min="0" step="0.01" placeholder="0.00" /></label></div><small>Enter either Unit Price or Total Price; the other value is calculated automatically from the item quantity.</small></div>
+        <div class="bidders"><div class="subheading"><h3>Bidder Quotations</h3><button class="button small add-bidder">+ Add Bidder</button></div><div class="bidder-list"></div></div>
+      </div>
+    </article>
+  </template>
+  <template id="bidderTemplate"><div class="bidder-row"><input class="bidder-name" placeholder="Bidder name" /><input class="bidder-model" placeholder="Model name" /><input class="bidder-unit" type="number" min="0" step="0.01" placeholder="Unit Price" /><input class="bidder-total" type="number" min="0" step="0.01" placeholder="Total Price" /><button class="icon-button remove-bidder" title="Remove bidder">×</button></div></template>
+  <script src="app.js"></script>
+</body>
+</html>
