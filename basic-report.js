@@ -72,19 +72,20 @@ function generateImage(record) {
     const specs = specFields(card).map(([label, value]) => ({
       label, value: wrapText(value || '-', bodyWidth - 170, specFont)
     }));
-    const specHeight = specs.reduce((sum, spec) => sum + Math.max(24, spec.value.length * 20) + 3, 0);
+    const specHeight = specs.reduce((sum, spec) => sum + Math.max(28, spec.value.length * 25) + 4, 0);
     const quotes = itemAnalysis.quotes.map(quote => ({
       quote,
       nameLines: wrapText(quote.name || '-', bodyWidth - 125, 'bold 15px Segoe UI'),
       modelLines: wrapText(quote.model || '-', bodyWidth - 125, '14px Segoe UI')
     }));
-    const quoteHeights = quotes.map(q => 32 + q.nameLines.length * 19 + q.modelLines.length * 18 + 12);
+    const quoteHeights = quotes.map(q => 58 + q.nameLines.length * 19 + q.modelLines.length * 18);
     const blockHeight = 60 + 12 + specHeight + 24 + quoteHeights.reduce((a,b)=>a+b,0) + 20;
     return {card, itemAnalysis, itemIndex, specs, quotes, quoteHeights, blockHeight};
   });
-  const contentHeight = 190 + prepared.reduce((sum, item) => sum + item.blockHeight + 22, 0);\n  const height = 2000;\n  const fitScale = Math.min(1, (height - 36) / contentHeight);
+  const contentHeight = 190 + prepared.reduce((sum, item) => sum + item.blockHeight + 22, 0);
+  const height = contentHeight;
   canvas.width = width * 2; canvas.height = height * 2;
-  ctx.scale(2, 2);\n  ctx.translate((width - width * fitScale) / 2, 0);\n  ctx.scale(fitScale, fitScale);
+  ctx.scale(2, 2);
   ctx.fillStyle = '#f6f8fb'; ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, 148);
   ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 9, 148);
@@ -99,7 +100,7 @@ function generateImage(record) {
     ctx.fillStyle = '#fff'; ctx.fillRect(20, y, width - 40, blockHeight);
     ctx.strokeStyle = '#dfe4ea'; ctx.lineWidth = 1.5; ctx.strokeRect(20, y, width - 40, blockHeight);
     ctx.fillStyle = '#f1eaf4'; ctx.fillRect(20, y, width - 40, 46);
-    ctx.fillStyle = '#65146d'; ctx.font = 'bold 12px Segoe UI';
+    ctx.fillStyle = '#65146d'; ctx.font = 'bold 18px Segoe UI';
     wrapText((card.name || 'Item ' + (itemIndex + 1)) + ' | Qty: ' + (card.qty || '-'), bodyWidth - 20, 'bold 18px Segoe UI').slice(0,2).forEach((line,index)=>ctx.fillText(line, 36, y + 26 + index*20));
     let specY = y + 70;
     specs.forEach(spec => {
