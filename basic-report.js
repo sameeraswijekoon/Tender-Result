@@ -86,7 +86,7 @@ async function generateImage(record) {
     }));
     const specHeight = 68 + specs.reduce((sum, row) => sum + Math.max(34, row.lines.length * 26 + 8), 0);
     const quoteHeight = 58 + quotes.reduce((sum, row) => sum + Math.max(64, Math.max(row.name.length, row.model.length) * 27 + rowPad), 0);
-    const height = 88 + specHeight + 24 + quoteHeight + 36;
+    const height = 94 + specHeight + 24 + quoteHeight + 36;
     prepared.push({card, itemIndex, specs, quotes, height, specHeight, quoteHeight});
     totalHeight += height + 22;
   });
@@ -131,7 +131,7 @@ async function generateImage(record) {
     });
     y += section.specHeight + 24;
     const tableX = margin, tableW = contentW;
-    const cols = [86, 350, 350, 220, tableW - 1006];
+    const cols = [72, 320, 320, 220, tableW - 960];
     const headers = ['RANK', 'BIDDER', 'MODEL', 'UNIT PRICE', 'TOTAL PRICE'];
     ctx.fillStyle = '#65146d'; ctx.fillRect(tableX, y, tableW, 58);
     let x = tableX + 14;
