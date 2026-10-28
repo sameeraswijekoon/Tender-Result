@@ -39,7 +39,9 @@ function saveData() {
       category: card.querySelector('.category').value, model: card.querySelector('.model').value,
       processor: card.querySelector('.processor').value, ram: card.querySelector('.ram').value,
       storage: card.querySelector('.storage').value, display: card.querySelector('.display').value,
-      warranty: card.querySelector('.warranty').value, abansUnit: card.querySelector('.abans-unit').value,
+      warranty: card.querySelector('.warranty').value,
+      localPurchase1: card.querySelector('.local-purchase-1').value, localPurchase2: card.querySelector('.local-purchase-2').value, localPurchase3: card.querySelector('.local-purchase-3').value,
+      abansUnit: card.querySelector('.abans-unit').value,
       abansTotal: card.querySelector('.abans-total').value,
       bidders: [...card.querySelectorAll('.bidder-row')].map(row => ({ name: row.querySelector('.bidder-name').value, model: row.querySelector('.bidder-model').value, unit: row.querySelector('.bidder-unit').value, total: row.querySelector('.bidder-total').value }))
     }))
@@ -61,6 +63,9 @@ function restoreData() {
     card.querySelector('.item-name').value = data.name || '';
     card.querySelector('.item-qty').value = data.qty || 1;
     ['category','model','processor','ram','storage','display','warranty'].forEach(field => card.querySelector(`.${field}`).value = data[field] || '');
+    card.querySelector('.local-purchase-1').value = data.localPurchase1 || '';
+    card.querySelector('.local-purchase-2').value = data.localPurchase2 || '';
+    card.querySelector('.local-purchase-3').value = data.localPurchase3 || '';
     card.querySelector('.abans-unit').value = data.abansUnit || '';
     card.querySelector('.abans-total').value = data.abansTotal || '';
     card.querySelector('.bidder-list').innerHTML = '';
@@ -322,7 +327,10 @@ function generateImage() {
         `RAM: ${card.querySelector('.ram').value || '-'}`,
         `Storage: ${card.querySelector('.storage').value || '-'}`,
         `Display / Monitor: ${card.querySelector('.display').value || '-'}`,
-        `Warranty: ${card.querySelector('.warranty').value || '-'}`
+        `Warranty: ${card.querySelector('.warranty').value || '-'}`,
+        `Local Purchase 1: ${card.querySelector('.local-purchase-1').value || '-'}`,
+        `Local Purchase 2: ${card.querySelector('.local-purchase-2').value || '-'}`,
+        `Local Purchase 3: ${card.querySelector('.local-purchase-3').value || '-'}`
       ]
     };
   }).filter(item => item.quotes.length);
