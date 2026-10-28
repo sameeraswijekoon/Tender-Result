@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Abans Tender Reading Management</title>
-  <link rel="stylesheet" href="styles.css?v=20261028-2" />
-  <link rel="stylesheet" href="abans-theme.css?v=20261028-2" />
+  <link rel="stylesheet" href="styles.css?v=20261028-3" />
+  <link rel="stylesheet" href="abans-theme.css?v=20261028-3" />
 </head>
 <body>
   <header class="topbar">
@@ -50,7 +50,7 @@
           <label>RAM<input class="ram" placeholder="e.g. 16 GB" /></label>
           <label>Storage<input class="storage" placeholder="e.g. 512 GB SSD" /></label>
           <label>Display / Monitor<input class="display" placeholder="e.g. 15.6 inch FHD" /></label>
-          <label>Warranty<input class="warranty" placeholder="e.g. 3 Years" /></label>
+          <label>Warranty<select class="warranty"><option value="">Select Warranty</option><option value="1 Year">1 Year</option><option value="2 Years">2 Years</option><option value="3 Years">3 Years</option><option value="4 Years">4 Years</option><option value="5 Years">5 Years</option><option value="1 Year Comprehensive">1 Year Comprehensive</option><option value="2 Years Comprehensive">2 Years Comprehensive</option><option value="3 Years Comprehensive">3 Years Comprehensive</option><option value="4 Years Comprehensive">4 Years Comprehensive</option><option value="5 Years Comprehensive">5 Years Comprehensive</option></select></label>
           <label>Local Purchase 1<input class="local-purchase-1" placeholder="e.g. UPS included / model / price details" /></label>
           <label>Local Purchase 2<input class="local-purchase-2" placeholder="e.g. Microsoft Office / license details" /></label>
           <label>Local Purchase 3<input class="local-purchase-3" placeholder="Other included item / details" /></label>
@@ -61,6 +61,6 @@
     </article>
   </template>
   <template id="bidderTemplate"><div class="bidder-row"><input class="bidder-name" placeholder="Bidder name" /><input class="bidder-model" placeholder="Model name" /><input class="bidder-unit" type="number" min="0" step="0.01" placeholder="Unit Price" /><input class="bidder-total" type="number" min="0" step="0.01" placeholder="Total Price" /><button class="icon-button remove-bidder" title="Remove bidder">×</button></div></template>
-  <script src="app.js?v=20261028-2"></script>
+  <script src="app.js?v=20261028-3"></script>
 </body>
 </html>
