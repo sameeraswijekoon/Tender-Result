@@ -82,13 +82,16 @@ async function generateImage(record) {
       ['Local purchase 1', card.localPurchase1], ['Local purchase 2', card.localPurchase2],
       ['Local purchase 3', card.localPurchase3]
     ].filter(pair => pair[1] !== undefined && pair[1] !== null && String(pair[1]).trim() !== '');
-    const specs = fields.map(pair => ({label:pair[0], lines:wrap(pair[1], fontBody, contentW - 300)}));
+    const specColW = Math.floor(contentW / 2);
+    const specs = fields.map(pair => ({label:pair[0], lines:wrap(pair[1], fontBody, specColW - 270)}));
     const quotes = (item.analysis.quotes || []).map((quote, index) => ({
       quote, rank:index + 1,
-      name:wrap(quote.name || 'Unnamed bidder', fontBody, 300),
-      model:wrap(quote.model || '-', fontSmall, 300)
+      name:wrap(quote.name || 'Unnamed bidder', fontBody, 272),
+      model:wrap(quote.model || '-', fontSmall, 272)
     }));
-    const specHeight = 68 + specs.reduce((sum, row) => sum + Math.max(34, row.lines.length * 32 + 10), 0);
+    let specRowsHeight = 0;
+    for (let i = 0; i < specs.length; i += 2) specRowsHeight += Math.max(...specs.slice(i, i + 2).map(row => Math.max(34, row.lines.length * 32 + 10)));
+    const specHeight = 64 + specRowsHeight;
     const quoteHeight = 68 + quotes.reduce((sum, row) => sum + Math.max(76, Math.max(row.name.length, row.model.length) * 34 + rowPad), 0);
     const height = 72 + specHeight + 24 + quoteHeight + 36;
     prepared.push({card, itemIndex, specs, quotes, height, specHeight, quoteHeight});
@@ -123,22 +126,41 @@ async function generateImage(record) {
     ctx.fillStyle = '#fff'; ctx.fillRect(margin, y, contentW, section.specHeight);
     ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin, y, contentW, section.specHeight);
     ctx.fillStyle = '#29242b'; ctx.font = fontHead; ctx.fillText('SPECIFICATIONS', margin + 18, y + 34);
+    const specColW = Math.floor(contentW / 2);
+    ctx.strokeStyle = '#e8edf3'; ctx.beginPath(); ctx.moveTo(margin + specColW, y + 52); ctx.lineTo(margin + specColW, y + section.specHeight - 10); ctx.stroke();
     let sy = y + 64;
-    section.specs.forEach(row => {
-      ctx.fillStyle = '#625a66'; ctx.font = 'bold ' + fontSmall;
-      ctx.fillText(row.label, margin + 18, sy);
-      ctx.fillStyle = '#29242b'; ctx.font = fontBody;
-      row.lines.forEach((line, i) => ctx.fillText(line, margin + 260, sy + i * 32));
-      sy += Math.max(34, row.lines.length * 32 + 10);
-    });
+    for (let i = 0; i < section.specs.length; i += 2) {
+      const pair = section.specs.slice(i, i + 2);
+      const rowH = Math.max(...pair.map(row => Math.max(34, row.lines.length * 32 + 10)));
+      pair.forEach((row, j) => {
+        const cellX = margin + j * specColW;
+        ctx.fillStyle = '#625a66'; ctx.font = 'bold ' + fontSmall;
+        ctx.fillText(row.label, cellX + 18, sy);
+        ctx.fillStyle = '#29242b'; ctx.font = fontBody;
+        row.lines.forEach((line, li) => ctx.fillText(line, cellX + 252, sy + li * 32));
+      });
+      sy += rowH;
+      if (i + 2 < section.specs.length) { ctx.strokeStyle = '#eef1f5'; ctx.beginPath(); ctx.moveTo(margin + 14, sy - 6); ctx.lineTo(margin + contentW - 14, sy - 6); ctx.stroke(); }
+    }
     y += section.specHeight + 24;
     const tableX = margin, tableW = contentW;
-    const cols = [70, 280, 280, 240, tableW - 898];
-    const headers = ['RANK', 'BIDDER', 'MODEL', 'UNIT PRICE', 'TOTAL PRICE'];
+    const cols = [96, 300, 300, 264, tableW - 960];
+    const colX = [tableX]; cols.forEach(w => colX.push(colX[colX.length - 1] + w));
     ctx.fillStyle = '#65146d'; ctx.fillRect(tableX, y, tableW, 68);
-    let x = tableX + 14;
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 21px Arial';
-    headers.forEach((header, i) => { ctx.fillText(header, x, y + 43); x += cols[i]; });
+    ctx.strokeStyle = '#ffffff55'; ctx.beginPath();
+    for (let i = 1; i < cols.length; i++) { ctx.moveTo(colX[i], y + 10); ctx.lineTo(colX[i], y + 58); }
+    ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'left';
+    ctx.fillText('RANK', colX[0] + 16, y + 43);
+    ctx.fillText('BIDDER', colX[1] + 14, y + 43);
+    ctx.fillText('MODEL', colX[2] + 14, y + 43);
+    ctx.textAlign = 'right';
+    ctx.fillText('UNIT PRICE', colX[4] - 16, y + 43);
+    ctx.fillText('TOTAL PRICE', colX[5] - 16, y + 43);
+    ctx.textAlign = 'left';
+    ctx.strokeStyle = '#dfe5ec'; ctx.beginPath();
+    for (let i = 1; i < cols.length; i++) { ctx.moveTo(colX[i], y + 68); ctx.lineTo(colX[i], y + section.quoteHeight); }
+    ctx.stroke();
     y += 68;
     section.quotes.forEach((row, index) => {
       const lines = Math.max(row.name.length, row.model.length, 1);
@@ -146,15 +168,16 @@ async function generateImage(record) {
       ctx.fillStyle = row.rank === 1 ? '#e4f5eb' : (index % 2 ? '#fff' : '#f9fafc');
       ctx.fillRect(tableX, y, tableW, rh);
       ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(tableX, y, tableW, rh);
-      let cx = tableX + 14;
       ctx.fillStyle = row.rank === 1 ? '#126b42' : '#29242b';
-      ctx.font = 'bold ' + fontBody; ctx.fillText('L' + row.rank, cx, y + rh / 2 + 7); cx += cols[0];
+      ctx.font = 'bold ' + fontBody; ctx.fillText('L' + row.rank, colX[0] + 16, y + rh / 2 + 7);
       ctx.fillStyle = '#29242b'; ctx.font = fontBody;
-      row.name.forEach((line, i) => ctx.fillText(line, cx, y + 32 + i * 34)); cx += cols[1];
+      row.name.forEach((line, i) => ctx.fillText(line, colX[1] + 14, y + 32 + i * 34));
       ctx.font = fontSmall;
-      row.model.forEach((line, i) => ctx.fillText(line, cx, y + 26 + i * 27)); cx += cols[2];
-      ctx.fillText(money.format(row.quote.unit), cx, y + rh / 2 + 6); cx += cols[3];
-      ctx.fillText(money.format(row.quote.total), cx, y + rh / 2 + 6);
+      row.model.forEach((line, i) => ctx.fillText(line, colX[2] + 14, y + 26 + i * 27));
+      ctx.font = fontBody; ctx.textAlign = 'right';
+      ctx.fillText(money.format(row.quote.unit), colX[4] - 16, y + rh / 2 + 6);
+      ctx.fillText(money.format(row.quote.total), colX[5] - 16, y + rh / 2 + 6);
+      ctx.textAlign = 'left';
       y += rh;
     });
     y += 36;
