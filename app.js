@@ -388,7 +388,8 @@ function generateImage() {
 document.querySelector('#addItem').onclick = addItem;
 document.querySelector('#generateImage').onclick = generateImage;
 document.querySelector('#newEntry').onclick = () => { if (!confirm('Clear this form and start a new tender entry?')) return; cloudTenderId = ''; cloudCreatedAt = ''; offlineTenderId = ''; localStorage.removeItem('abansCloudTenderId'); localStorage.removeItem('abansCloudCreatedAt'); localStorage.removeItem('abansOfflineTenderId'); localStorage.removeItem(storageKey); document.querySelector('#customerName').value = ''; document.querySelector('#accountHolderName').value = ''; document.querySelector('#closingDate').value = ''; items.innerHTML = ''; addItem(); setCloudStatus('New empty tender entry created.'); };
-document.querySelector('#loadMatale').onclick = () => { if (items.children.length && !confirm('Load General Hospital–Matale data? Current unsaved form data will be replaced.')) return; cloudTenderId = ''; cloudCreatedAt = ''; offlineTenderId = ''; localStorage.removeItem('abansCloudTenderId'); localStorage.removeItem('abansCloudCreatedAt'); localStorage.removeItem('abansOfflineTenderId'); localStorage.setItem(storageKey, JSON.stringify({ ...mataleTender, expiresAt: Date.now() + 2 * 60 * 60 * 1000 })); items.innerHTML = ''; restoreData(); };
+
+
 document.querySelector('#saveDraft').onclick = () => saveCloud('draft');
 document.querySelector('#saveFinal').onclick = () => saveCloud('final');
 document.querySelector('#customerName').addEventListener('input', saveData);
