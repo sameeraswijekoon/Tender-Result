@@ -56,10 +56,11 @@ const mataleTender = {
   ]
 };
 
-function saveData() {
-  if (isRestoring) return;
+// Builds the tender record from the form as it stands. There is no local
+// draft any more - to carry a form to another person or device, use the
+// Share fill link button instead.
+function collectFormData() {
   const data = {
-    expiresAt: Date.now() + 2 * 60 * 60 * 1000,
     cloudTenderId,
     createdAt: cloudCreatedAt,
     customerName: document.querySelector('#customerName').value,
@@ -91,12 +92,11 @@ function saveData() {
       bidders: [...card.querySelectorAll('.bidder-row')].map(row => ({ name: row.querySelector('.bidder-name').value, model: row.querySelector('.bidder-model').value, unit: row.querySelector('.bidder-unit').value, total: row.querySelector('.bidder-total').value }))
     }))
   };
-  localStorage.setItem(storageKey, JSON.stringify(data));
+  return data;
 }
 
-function restoreData() {
-  const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
-  if (!saved || saved.expiresAt <= Date.now()) { localStorage.removeItem(storageKey); return false; }
+function applyFormData(saved) {
+  if (!saved || !Array.isArray(saved.cards)) return false;
   cloudTenderId = saved.cloudTenderId || cloudTenderId;
   cloudCreatedAt = saved.createdAt || cloudCreatedAt;
   isRestoring = true;
@@ -198,7 +198,6 @@ function renderResults() {
     target.insertAdjacentHTML('beforeend', `<div class="result-item"><div class="result-title">${name}<span>Qty: ${itemQty(card)}</span></div><table class="result-table"><thead><tr><th>Bidder</th><th>Model</th><th class="money">Unit Price</th><th class="money">Total Price</th><th class="money">Abans Price Gap</th></tr></thead><tbody>${rows}</tbody></table></div>`);
   });
   empty.style.display = target.children.length ? 'none' : 'block';
-  saveData();
 }
 
 function setCloudStatus(message, isError = false) {
@@ -218,9 +217,7 @@ function saveOfflineTender(data) {
 
 async function saveCloud(status) {
   if (!document.querySelector('#customerName').value.trim()) return alert('Enter the customer name before saving to Firebase.');
-  saveData();
-  const data = JSON.parse(localStorage.getItem(storageKey));
-  delete data.expiresAt;
+  const data = collectFormData();
   data.status = status;
   data.updatedAt = new Date().toISOString();
   if (!data.createdAt) { cloudCreatedAt = new Date().toISOString(); localStorage.setItem('abansCloudCreatedAt', cloudCreatedAt); data.createdAt = cloudCreatedAt; }
@@ -231,7 +228,6 @@ async function saveCloud(status) {
     const response = await fetch(url, { method: cloudTenderId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if (!response.ok) throw new Error('Firebase rejected the request');
     if (!cloudTenderId) { cloudTenderId = (await response.json()).name; localStorage.setItem('abansCloudTenderId', cloudTenderId); }
-    saveData();
     setCloudStatus(status === 'final' ? 'Final tender saved to Firebase' : 'Temporary cloud draft saved — continue later from any device');
   } catch (error) { setCloudStatus('Could not save to Firebase. Check database rules and internet connection.', true); }
 }
@@ -245,11 +241,10 @@ async function openCloudTender(id) {
     if (!data) throw new Error('Tender not found');
     cloudTenderId = id; localStorage.setItem('abansCloudTenderId', id);
     cloudCreatedAt = data.createdAt || ''; localStorage.setItem('abansCloudCreatedAt', cloudCreatedAt);
-    data.expiresAt = Date.now() + 2 * 60 * 60 * 1000; data.cloudTenderId = id;
-    localStorage.setItem(storageKey, JSON.stringify(data));
+    data.cloudTenderId = id;
     items.innerHTML = '';
-    restoreData();
-    setCloudStatus('Cloud tender loaded. Local copy will clear after 2 hours.');
+    applyFormData(data);
+    setCloudStatus('Cloud tender loaded.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (error) { setCloudStatus('Could not load this tender from Firebase.', true); }
 }
@@ -423,10 +418,7 @@ document.querySelector('#generateImage').onclick = generateImage;
 // basic spec filled, prices blank) and copy it for sending to the team.
 // Whoever opens it gets this form loaded; nothing saves until they press Save.
 document.querySelector('#shareLink').onclick = async () => {
-  saveData();
-  const data = JSON.parse(localStorage.getItem(storageKey) || 'null');
-  if (!data) { showToast('Fill the form first, then share the link.'); return; }
-  delete data.expiresAt;
+  const data = collectFormData();
   const bytes = new TextEncoder().encode(JSON.stringify(data));
   let binary = '';
   const chunk = 0x8000;
@@ -441,10 +433,8 @@ document.querySelector('#newEntry').onclick = () => { if (!confirm('Clear this f
 
 document.querySelector('#saveDraft').onclick = () => saveCloud('draft');
 document.querySelector('#saveFinal').onclick = () => saveCloud('final');
-document.querySelector('#customerName').addEventListener('input', saveData);
-document.querySelector('#accountHolderName').addEventListener('input', saveData);
-document.querySelector('#closingDate').addEventListener('change', saveData);
 loadAccountHolders();
+let pendingFillData = null;
 // Shared links: ?open=<firebaseId> opens a saved tender in this form;
 // ?fill=<base64url JSON> pre-fills the form from data carried in the link
 // itself - nothing is saved until the user presses Save.
@@ -458,15 +448,14 @@ try {
     while (b64.length % 4) b64 += '=';
     const bytes = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
     const data = JSON.parse(new TextDecoder().decode(bytes));
-    if (data && Array.isArray(data.cards)) {
-      data.expiresAt = Date.now() + 2 * 60 * 60 * 1000;
-      if (data.cloudTenderId) { localStorage.setItem('abansCloudTenderId', data.cloudTenderId); if (data.createdAt) localStorage.setItem('abansCloudCreatedAt', data.createdAt); }
-      localStorage.setItem(storageKey, JSON.stringify(data));
-    }
+    if (data && Array.isArray(data.cards)) { pendingFillData = data; }
     history.replaceState(null, '', location.pathname);
   }
 } catch (error) { /* a bad link just starts a normal empty form */ }
-if (!restoreData()) addItem();
+// No local draft: the form starts empty, from a shared link, or from a cloud
+// tender. Clear any draft left behind by the old version.
+localStorage.removeItem(storageKey);
+if (pendingFillData) { items.innerHTML = ''; applyFormData(pendingFillData); } else addItem();
 const pendingCloudTenderId = localStorage.getItem('abansOpenCloudTenderId');
 if (pendingCloudTenderId) { localStorage.removeItem('abansOpenCloudTenderId'); openCloudTender(pendingCloudTenderId); }
 
