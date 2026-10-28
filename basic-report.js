@@ -46,52 +46,78 @@ function editTender(record) { localStorage.setItem('abansTenderDraft', JSON.stri
 async function deleteTender(record) { if (!confirm(`Delete tender for ${record.customerName || 'this customer'}? This cannot be undone.`)) return; try { const response = await fetch(`https://tender-reading-management-default-rtdb.firebaseio.com/tenders/${record.id}.json`, { method: 'DELETE' }); if (!response.ok) throw new Error(); records = records.filter(item => item.id !== record.id); draw(); alert('Tender deleted from Firebase.'); } catch { alert('Could not delete from Firebase. Check your database connection and rules.'); } }
 function generateImage(record) { const analysis=tenderAnalysis(record), width=1500, line=42, height=180+analysis.items.reduce((sum,item)=>sum+105+item.analysis.quotes.length*line,0), canvas=document.createElement('canvas');canvas.width=width*2;canvas.height=height*2;const ctx=canvas.getContext('2d');ctx.scale(2,2);ctx.fillStyle='#f5f8fc';ctx.fillRect(0,0,width,height);ctx.fillStyle='#102a43';ctx.font='bold 26px Segoe UI';ctx.fillText(record.customerName||'Tender Result',45,48);ctx.font='17px Segoe UI';ctx.fillStyle='#486581';ctx.fillText(`Account Holder: ${record.accountHolderName||'-'}     Closing Date: ${record.closingDate||'-'}`,45,80);let y=112;analysis.items.forEach(({card,analysis})=>{const block=105+analysis.quotes.length*line;ctx.fillStyle='#fff';ctx.fillRect(35,y,width-70,block);ctx.strokeStyle='#dce4ed';ctx.strokeRect(35,y,width-70,block);ctx.fillStyle='#eef4f8';ctx.fillRect(35,y,width-70,38);ctx.fillStyle='#102a43';ctx.font='bold 17px Segoe UI';ctx.fillText(`${card.name||'Item'}  |  Qty: ${card.qty||'-'}`,55,y+25);ctx.fillStyle='#627d98';ctx.font='bold 12px Segoe UI';['RANK','BIDDER','MODEL','UNIT PRICE','TOTAL PRICE'].forEach((text,index)=>ctx.fillText(text,[55,220,590,1000,1240][index],y+63));analysis.quotes.forEach((quote,index)=>{const row=y+91+index*line;if(index===0){ctx.fillStyle='#eaf8ef';ctx.fillRect(36,row-25,width-72,line)}ctx.fillStyle=index===0?'#16794f':'#243b53';ctx.font='15px Segoe UI';ctx.fillText(`L${index+1}`,[55][0],row);ctx.fillText(quote.name,220,row);ctx.fillText(quote.model,590,row);ctx.fillText(money.format(quote.unit),1000,row);ctx.fillText(money.format(quote.total),1240,row);});y+=block+15;});const link=document.createElement('a');link.download=`Tender-${(record.customerName||'Result').replaceAll(' ','-')}.png`;link.href=canvas.toDataURL('image/png');link.click();}
 
-// Detailed image export: includes every item's complete tender specification.
+// Detailed image export: clear title, customer name, and wrapped specifications.
 function generateImage(record) {
-  const analysis = tenderAnalysis(record), width = 1600, quoteLine = 38;
-  const blockHeights = analysis.items.map(item => 180 + item.analysis.quotes.length * quoteLine);
-  const height = 175 + blockHeights.reduce((sum, block) => sum + block + 18, 0);
-  const canvas = document.createElement('canvas'); canvas.width = width * 2; canvas.height = height * 2;
-  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  ctx.fillStyle = '#f7f8fa'; ctx.fillRect(0, 0, width, height);
+  const analysis = tenderAnalysis(record), width = 1600, padding = 42;
+  const specFields = card => [
+    ['Category', card.category], ['Quoted Model', card.model], ['Processor', card.processor],
+    ['RAM', card.ram], ['Storage', card.storage], ['Display / Monitor', card.display || card.monitor],
+    ['Warranty', card.warranty]
+  ];
+  const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+  const quoteLine = 38, specFont = '14px Segoe UI', specMaxWidth = width - 2 * padding - 40;
+  function wrapText(value, maxWidth, font = specFont) {
+    ctx.font = font;
+    const words = String(value ?? '-').trim().split(/\s+/);
+    const lines = []; let line = '';
+    words.forEach(word => {
+      const candidate = line ? line + ' ' + word : word;
+      if (line && ctx.measureText(candidate).width > maxWidth) { lines.push(line); line = word; }
+      else line = candidate;
+    });
+    lines.push(line || '-');
+    return lines;
+  }
+  const prepared = analysis.items.map(({card, analysis: itemAnalysis}, itemIndex) => {
+    const specs = specFields(card).map(([label, value]) => ({label, value: wrapText(value || '-', specMaxWidth - 150)}));
+    const specHeight = specs.reduce((sum, spec) => sum + Math.max(24, spec.value.length * 19) + 3, 0);
+    const blockHeight = 44 + 12 + specHeight + 40 + itemAnalysis.quotes.length * quoteLine + 18;
+    return {card, itemAnalysis, itemIndex, specs, blockHeight};
+  });
+  const height = 150 + prepared.reduce((sum, item) => sum + item.blockHeight + 18, 0);
+  canvas.width = width * 2; canvas.height = height * 2;
+  ctx.scale(2, 2);
+  ctx.fillStyle = '#f6f8fb'; ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, 112);
   ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 8, 112);
-  ctx.fillStyle = '#29242b'; ctx.font = 'bold 26px Segoe UI'; ctx.fillText('Tender Price Comparison', 42, 42);
-  ctx.fillStyle = '#7b1d83'; ctx.font = 'bold 19px Segoe UI'; ctx.fillText(record.customerName || 'Tender Record', 42, 72);
+  ctx.fillStyle = '#29242b'; ctx.font = 'bold 28px Segoe UI'; ctx.fillText('Tender Result', padding, 38);
+  ctx.fillStyle = '#7b1d83'; ctx.font = 'bold 21px Segoe UI'; ctx.fillText(record.customerName || 'Customer Name Not Available', padding, 69);
   ctx.fillStyle = '#766d78'; ctx.font = '14px Segoe UI';
-  ctx.fillText(`Account Holder: ${record.accountHolderName || '-'}     |     Closing Date: ${record.closingDate || '-'}`, 42, 96);
-  let y = 132;
-  analysis.items.forEach(({ card, analysis: itemAnalysis }, itemIndex) => {
-    const block = blockHeights[itemIndex];
-    ctx.fillStyle = '#fff'; ctx.fillRect(35, y, width - 70, block);
-    ctx.strokeStyle = '#e3e5e8'; ctx.strokeRect(35, y, width - 70, block);
-    ctx.fillStyle = '#f4edf6'; ctx.fillRect(35, y, width - 70, 38);
+  ctx.fillText(`Account Holder: ${record.accountHolderName || '-'}     |     Closing Date: ${record.closingDate || '-'}`, padding, 94);
+  let y = 130;
+  prepared.forEach(({card, itemAnalysis, itemIndex, specs, blockHeight}) => {
+    ctx.fillStyle = '#fff'; ctx.fillRect(30, y, width - 60, blockHeight);
+    ctx.strokeStyle = '#dfe4ea'; ctx.strokeRect(30, y, width - 60, blockHeight);
+    ctx.fillStyle = '#f1eaf4'; ctx.fillRect(30, y, width - 60, 38);
     ctx.fillStyle = '#65146d'; ctx.font = 'bold 18px Segoe UI';
-    ctx.fillText(`${card.name || `Item ${itemIndex + 1}`}  |  Qty: ${card.qty || '-'}`, 55, y + 26);
-    const specs = [
-      `Category: ${card.category || '-'}`, `Model: ${card.model || '-'}`,
-      `Processor: ${card.processor || '-'}`, `RAM: ${card.ram || '-'}`,
-      `Storage: ${card.storage || '-'}`, `Display / Monitor: ${card.display || card.monitor || '-'}`,
-      `Warranty: ${card.warranty || '-'}`
-    ];
-    ctx.fillStyle = '#514957'; ctx.font = '13px Segoe UI';
-    ctx.fillText(specs.slice(0, 2).join('     |     '), 55, y + 63);
-    ctx.fillText(specs.slice(2, 5).join('     |     '), 55, y + 84);
-    ctx.fillText(specs.slice(5).join('     |     '), 55, y + 105);
-    const headerY = y + 130;
-    ctx.fillStyle = '#f7f4f8'; ctx.fillRect(36, headerY - 19, width - 72, 27);
+    ctx.fillText(`${card.name || `Item ${itemIndex + 1}`}  |  Qty: ${card.qty || '-'}`, 50, y + 25);
+    let specY = y + 62;
+    specs.forEach(spec => {
+      ctx.fillStyle = '#514957'; ctx.font = 'bold 13px Segoe UI';
+      ctx.fillText(spec.label + ':', 50, specY);
+      ctx.fillStyle = '#29242b'; ctx.font = specFont;
+      spec.value.forEach((line, index) => ctx.fillText(line, 190, specY + index * 19));
+      specY += Math.max(24, spec.value.length * 19) + 3;
+    });
+    const headerY = specY + 10;
+    ctx.fillStyle = '#f5f2f7'; ctx.fillRect(42, headerY - 20, width - 84, 28);
     ctx.fillStyle = '#766d78'; ctx.font = 'bold 11px Segoe UI';
-    ['RANK', 'BIDDER', 'MODEL', 'UNIT PRICE', 'TOTAL PRICE'].forEach((text, index) => ctx.fillText(text, [55, 220, 600, 1080, 1330][index], headerY));
+    ['RANK', 'BIDDER', 'MODEL', 'UNIT PRICE', 'TOTAL PRICE'].forEach((label, index) => ctx.fillText(label, [52, 200, 590, 1080, 1330][index], headerY));
     itemAnalysis.quotes.forEach((quote, index) => {
       const rowY = headerY + 27 + index * quoteLine;
-      if (index === 0) { ctx.fillStyle = '#e9f8ef'; ctx.fillRect(36, rowY - 20, width - 72, quoteLine); }
+      if (index === 0) { ctx.fillStyle = '#e9f8ef'; ctx.fillRect(42, rowY - 20, width - 84, quoteLine); }
       ctx.fillStyle = index === 0 ? '#168453' : '#29242b'; ctx.font = '14px Segoe UI';
-      ctx.fillText(`L${index + 1}`, 55, rowY); ctx.fillText(quote.name, 220, rowY); ctx.fillText(quote.model, 600, rowY);
-      ctx.fillText(money.format(quote.unit), 1080, rowY); ctx.fillText(money.format(quote.total), 1330, rowY);
+      ctx.fillText(`L${index + 1}`, 52, rowY);
+      ctx.fillText(wrapText(quote.name, 360, '14px Segoe UI')[0], 200, rowY);
+      ctx.fillText(wrapText(quote.model, 440, '14px Segoe UI')[0], 590, rowY);
+      ctx.fillText(money.format(quote.unit), 1080, rowY);
+      ctx.fillText(money.format(quote.total), 1330, rowY);
     });
-    y += block + 18;
+    y += blockHeight + 18;
   });
-  const link = document.createElement('a'); link.download = `Tender-${(record.customerName || 'Result').replaceAll(' ', '-')}.png`; link.href = canvas.toDataURL('image/png'); link.click();
+  const link = document.createElement('a');
+  link.download = `Tender-${(record.customerName || 'Result').replaceAll(' ', '-')}.png`;
+  link.href = canvas.toDataURL('image/png'); link.click();
 }
 function renderVisualAnalytics(shown) {
   let host = document.querySelector('#visualAnalytics');
