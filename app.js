@@ -428,6 +428,27 @@ document.querySelector('#customerName').addEventListener('input', saveData);
 document.querySelector('#accountHolderName').addEventListener('input', saveData);
 document.querySelector('#closingDate').addEventListener('change', saveData);
 loadAccountHolders();
+// Shared links: ?open=<firebaseId> opens a saved tender in this form;
+// ?fill=<base64url JSON> pre-fills the form from data carried in the link
+// itself - nothing is saved until the user presses Save.
+try {
+  const linkParams = new URLSearchParams(location.search);
+  const openId = linkParams.get('open');
+  if (openId) { localStorage.setItem('abansOpenCloudTenderId', openId); history.replaceState(null, '', location.pathname); }
+  const fillData = linkParams.get('fill');
+  if (fillData) {
+    let b64 = fillData.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const bytes = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
+    const data = JSON.parse(new TextDecoder().decode(bytes));
+    if (data && Array.isArray(data.cards)) {
+      data.expiresAt = Date.now() + 2 * 60 * 60 * 1000;
+      if (data.cloudTenderId) { localStorage.setItem('abansCloudTenderId', data.cloudTenderId); if (data.createdAt) localStorage.setItem('abansCloudCreatedAt', data.createdAt); }
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    }
+    history.replaceState(null, '', location.pathname);
+  }
+} catch (error) { /* a bad link just starts a normal empty form */ }
 if (!restoreData()) addItem();
 const pendingCloudTenderId = localStorage.getItem('abansOpenCloudTenderId');
 if (pendingCloudTenderId) { localStorage.removeItem('abansOpenCloudTenderId'); openCloudTender(pendingCloudTenderId); }
