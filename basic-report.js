@@ -110,8 +110,10 @@ async function generateImage(record, options) {
     const titleFont = fs(isLandscape ? 34 : 39);
     const contentW = W - margin*2;
     const colRank = fs(58), colUnit = fs(isLandscape ? 220 : 230), colTotal = fs(isLandscape ? 250 : 250);
-    const colBidder = Math.round(contentW * (isLandscape ? .25 : .27));
-    const colModel = contentW - colRank - colUnit - colTotal - colBidder;
+    const tableTextInset = fs(14);
+    const tableContentW = contentW - tableTextInset*2;
+    const colBidder = Math.round(tableContentW * (isLandscape ? .25 : .27));
+    const colModel = tableContentW - colRank - colUnit - colTotal - colBidder;
     const specs = page.first ? specFields(page.card).map(pair => ({
       label:pair[0], lines:wrap(pair[1], smallFont + 'px Arial', contentW - fs(250))
     })) : [];
