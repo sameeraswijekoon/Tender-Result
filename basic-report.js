@@ -23,7 +23,7 @@ function tenderAnalysis(record) {
 function normalizeSearch(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 
 function buildFilters() {
-  [['category','category','All categories'],['processor','processor','All processors'],['ram','ram','All RAM']].forEach(([id,field,label]) => { const select=document.querySelector(`#${id}`), current=select.value; const rawValues=records.flatMap(record=>(record.cards||[]).map(card=>card[field]).filter(Boolean)).sort((a,b)=>String(a).localeCompare(String(b))); const values=[...new Map(rawValues.map(value=>[normalizeSearch(value),value])).values()]; select.innerHTML=`<option value="all">${label}</option>${values.map(value=>`<option value="${value}">${value}</option>`).join('')}`; select.value=values.find(value=>normalizeSearch(value)===normalizeSearch(current))||'all'; });
+  [['category','category','All categories'],['processor','processor','All processors'],['ram','ram','All RAM']].forEach(([id,field,label]) => { const select=document.querySelector(`#${id}`), current=select.value; const rawValues=records.flatMap(record=>(record.cards||[]).map(card=>card[field]).filter(Boolean)).filter(value=>field!=='category'||!/^local\s*purchase(?:\s*[123])?$/i.test(String(value).trim())).sort((a,b)=>String(a).localeCompare(String(b))); const values=[...new Map(rawValues.map(value=>[normalizeSearch(value),value])).values()]; select.innerHTML=`<option value="all">${label}</option>${values.map(value=>`<option value="${value}">${value}</option>`).join('')}`; select.value=values.find(value=>normalizeSearch(value)===normalizeSearch(current))||'all'; });
 }
 
 function filteredRecords() {
