@@ -47,3 +47,6 @@ input,select{height:44px!important;padding:10px 12px!important;font-size:15px!im
 
 /* Specification summary shown when expanding a tender record */
 .record-specifications{padding:12px;border-bottom:1px solid var(--line)}.record-specifications h4{margin:0 0 10px;color:var(--navy);font-size:13px}.record-spec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.record-spec-grid>div{padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:#fbfdff;min-width:0}.record-spec-grid strong,.record-spec-grid span{display:block}.record-spec-grid strong{font-size:11px;color:#627d98;margin-bottom:3px}.record-spec-grid span{font-size:13px;overflow-wrap:anywhere}@media(max-width:760px){.record-spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:450px){.record-spec-grid{grid-template-columns:1fr}}
+
+/* Expanded specification filters */
+.advanced-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px}.advanced-filters #search{grid-column:span 2}.advanced-filters #clear{align-self:stretch}@media(max-width:900px){.advanced-filters{grid-template-columns:repeat(3,minmax(0,1fr))!important}.advanced-filters #search{grid-column:span 2}}@media(max-width:600px){.advanced-filters{grid-template-columns:1fr!important}.advanced-filters #search{grid-column:span 1}}
