@@ -419,6 +419,23 @@ function generateImage() {
 
 document.querySelector('#addItem').onclick = addItem;
 document.querySelector('#generateImage').onclick = generateImage;
+// Build a ?fill= link from the form exactly as it stands now (normally:
+// basic spec filled, prices blank) and copy it for sending to the team.
+// Whoever opens it gets this form loaded; nothing saves until they press Save.
+document.querySelector('#shareLink').onclick = async () => {
+  saveData();
+  const data = JSON.parse(localStorage.getItem(storageKey) || 'null');
+  if (!data) { showToast('Fill the form first, then share the link.'); return; }
+  delete data.expiresAt;
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) { binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk)); }
+  const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const link = location.origin + location.pathname + '?fill=' + b64;
+  try { await navigator.clipboard.writeText(link); showToast('Fill link copied - send it to your team. They open it, fill the prices and Save.'); }
+  catch (error) { window.prompt('Copy this fill link and send it to your team:', link); }
+};
 document.querySelector('#newEntry').onclick = () => { if (!confirm('Clear this form and start a new tender entry?')) return; cloudTenderId = ''; cloudCreatedAt = ''; offlineTenderId = ''; localStorage.removeItem('abansCloudTenderId'); localStorage.removeItem('abansCloudCreatedAt'); localStorage.removeItem('abansOfflineTenderId'); localStorage.removeItem(storageKey); document.querySelector('#customerName').value = ''; document.querySelector('#accountHolderName').value = ''; document.querySelector('#closingDate').value = ''; items.innerHTML = ''; addItem(); setCloudStatus('New empty tender entry created.'); };
 
 
