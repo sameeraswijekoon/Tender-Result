@@ -48,14 +48,14 @@ function generateImage(record) { const analysis=tenderAnalysis(record), width=15
 
 // Mobile-first image export: portrait layout with stacked bidder details for phone screens.
 function generateImage(record) {
-  const analysis = tenderAnalysis(record), width = 1080, padding = 32;
+  const analysis = tenderAnalysis(record), width = 900, padding = 28;
   const specFields = card => [
     ['Category', card.category], ['Quoted Model', card.model], ['Processor', card.processor],
     ['RAM', card.ram], ['Storage', card.storage], ['Display / Monitor', card.display || card.monitor],
     ['Warranty', card.warranty]
   ];
   const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
-  const specFont = '18px Segoe UI', bodyWidth = width - padding * 2;
+  const specFont = '15px Segoe UI', bodyWidth = width - padding * 2;
   function wrapText(value, maxWidth, font = specFont) {
     ctx.font = font;
     const words = String(value ?? '-').trim().split(/\s+/);
@@ -70,40 +70,40 @@ function generateImage(record) {
   }
   const prepared = analysis.items.map(({card, analysis: itemAnalysis}, itemIndex) => {
     const specs = specFields(card).map(([label, value]) => ({
-      label, value: wrapText(value || '-', bodyWidth - 210, specFont)
+      label, value: wrapText(value || '-', bodyWidth - 170, specFont)
     }));
-    const specHeight = specs.reduce((sum, spec) => sum + Math.max(28, spec.value.length * 25) + 4, 0);
+    const specHeight = specs.reduce((sum, spec) => sum + Math.max(24, spec.value.length * 20) + 3, 0);
     const quotes = itemAnalysis.quotes.map(quote => ({
       quote,
-      nameLines: wrapText(quote.name || '-', bodyWidth - 150, 'bold 18px Segoe UI'),
-      modelLines: wrapText(quote.model || '-', bodyWidth - 150, '17px Segoe UI')
+      nameLines: wrapText(quote.name || '-', bodyWidth - 125, 'bold 15px Segoe UI'),
+      modelLines: wrapText(quote.model || '-', bodyWidth - 125, '14px Segoe UI')
     }));
-    const quoteHeights = quotes.map(q => 38 + q.nameLines.length * 23 + q.modelLines.length * 22 + 16);
+    const quoteHeights = quotes.map(q => 32 + q.nameLines.length * 19 + q.modelLines.length * 18 + 12);
     const blockHeight = 60 + 12 + specHeight + 24 + quoteHeights.reduce((a,b)=>a+b,0) + 20;
     return {card, itemAnalysis, itemIndex, specs, quotes, quoteHeights, blockHeight};
   });
-  const height = 190 + prepared.reduce((sum, item) => sum + item.blockHeight + 22, 0);
+  const contentHeight = 190 + prepared.reduce((sum, item) => sum + item.blockHeight + 22, 0);\n  const height = 2000;\n  const fitScale = Math.min(1, (height - 36) / contentHeight);
   canvas.width = width * 2; canvas.height = height * 2;
-  ctx.scale(2, 2);
+  ctx.scale(2, 2);\n  ctx.translate((width - width * fitScale) / 2, 0);\n  ctx.scale(fitScale, fitScale);
   ctx.fillStyle = '#f6f8fb'; ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, 148);
   ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 9, 148);
-  ctx.fillStyle = '#29242b'; ctx.font = 'bold 34px Segoe UI'; ctx.fillText('Tender Result', padding, 42);
-  ctx.fillStyle = '#7b1d83'; ctx.font = 'bold 25px Segoe UI';
-  wrapText(record.customerName || 'Customer Name Not Available', bodyWidth, 'bold 25px Segoe UI').slice(0,2).forEach((line,index)=>ctx.fillText(line,padding,76+index*29));
-  ctx.fillStyle = '#766d78'; ctx.font = '17px Segoe UI';
+  ctx.fillStyle = '#29242b'; ctx.font = 'bold 28px Segoe UI'; ctx.fillText('Tender Result', padding, 42);
+  ctx.fillStyle = '#7b1d83'; ctx.font = 'bold 20px Segoe UI';
+  wrapText(record.customerName || 'Customer Name Not Available', bodyWidth, 'bold 20px Segoe UI').slice(0,2).forEach((line,index)=>ctx.fillText(line,padding,72+index*24));
+  ctx.fillStyle = '#766d78'; ctx.font = '14px Segoe UI';
   ctx.fillText('Account Holder: ' + (record.accountHolderName || '-'), padding, 119);
-  ctx.fillText('Closing Date: ' + (record.closingDate || '-'), padding, 140);
+  ctx.fillText('Closing Date: ' + (record.closingDate || '-'), padding, 137);
   let y = 164;
   prepared.forEach(({card, itemAnalysis, itemIndex, specs, quotes, quoteHeights, blockHeight}) => {
     ctx.fillStyle = '#fff'; ctx.fillRect(20, y, width - 40, blockHeight);
     ctx.strokeStyle = '#dfe4ea'; ctx.lineWidth = 1.5; ctx.strokeRect(20, y, width - 40, blockHeight);
     ctx.fillStyle = '#f1eaf4'; ctx.fillRect(20, y, width - 40, 46);
-    ctx.fillStyle = '#65146d'; ctx.font = 'bold 22px Segoe UI';
-    wrapText((card.name || 'Item ' + (itemIndex + 1)) + ' | Qty: ' + (card.qty || '-'), bodyWidth - 20, 'bold 22px Segoe UI').slice(0,2).forEach((line,index)=>ctx.fillText(line, 36, y + 29 + index*24));
+    ctx.fillStyle = '#65146d'; ctx.font = 'bold 12px Segoe UI';
+    wrapText((card.name || 'Item ' + (itemIndex + 1)) + ' | Qty: ' + (card.qty || '-'), bodyWidth - 20, 'bold 18px Segoe UI').slice(0,2).forEach((line,index)=>ctx.fillText(line, 36, y + 26 + index*20));
     let specY = y + 70;
     specs.forEach(spec => {
-      ctx.fillStyle = '#514957'; ctx.font = 'bold 16px Segoe UI'; ctx.fillText(spec.label + ':', 36, specY);
+      ctx.fillStyle = '#514957'; ctx.font = 'bold 13px Segoe UI'; ctx.fillText(spec.label + ':', 36, specY);
       ctx.fillStyle = '#29242b'; ctx.font = specFont;
       spec.value.forEach((line,index)=>ctx.fillText(line, 220, specY + index*25));
       specY += Math.max(28, spec.value.length*25) + 4;
@@ -114,26 +114,26 @@ function generateImage(record) {
       ctx.fillStyle = index === 0 ? '#e5f6eb' : '#f4f6f9';
       ctx.fillRect(32, quoteY, width - 64, rowHeight - 5);
       ctx.fillStyle = index === 0 ? '#126b42' : '#202a35';
-      ctx.font = 'bold 19px Segoe UI';
+      ctx.font = 'bold 16px Segoe UI';
       ctx.fillText('L' + (index + 1), 44, quoteY + 26);
       ctx.font = 'bold 18px Segoe UI';
-      nameLines.forEach((line,lineIndex)=>ctx.fillText(line, 100, quoteY + 25 + lineIndex*23));
-      let detailY = quoteY + 25 + nameLines.length*23;
+      nameLines.forEach((line,lineIndex)=>ctx.fillText(line, 100, quoteY + 22 + lineIndex*19));
+      let detailY = quoteY + 22 + nameLines.length*19;
       ctx.fillStyle = '#514957'; ctx.font = 'bold 15px Segoe UI'; ctx.fillText('Model:', 44, detailY);
-      ctx.fillStyle = '#29242b'; ctx.font = '17px Segoe UI';
-      modelLines.forEach((line,lineIndex)=>ctx.fillText(line, 130, detailY + lineIndex*22));
-      const priceY = detailY + modelLines.length*22 + 22;
+      ctx.fillStyle = '#29242b'; ctx.font = '14px Segoe UI';
+      modelLines.forEach((line,lineIndex)=>ctx.fillText(line, 130, detailY + lineIndex*18));
+      const priceY = detailY + modelLines.length*18 + 18;
       ctx.fillStyle = '#514957'; ctx.font = 'bold 16px Segoe UI'; ctx.fillText('Unit Price', 44, priceY);
       ctx.fillStyle = '#29242b'; ctx.font = 'bold 18px Segoe UI'; ctx.fillText(money.format(quote.unit), 180, priceY);
-      ctx.fillStyle = '#514957'; ctx.font = 'bold 16px Segoe UI'; ctx.fillText('Total Price', 570, priceY);
+      ctx.fillStyle = '#514957'; ctx.font = 'bold 16px Segoe UI'; ctx.fillText('Total Price', 470, priceY);
       ctx.fillStyle = '#29242b'; ctx.font = 'bold 18px Segoe UI';
-      wrapText(money.format(quote.total), 380, 'bold 18px Segoe UI').slice(0,2).forEach((line,lineIndex)=>ctx.fillText(line, 700, priceY + lineIndex*21));
+      wrapText(money.format(quote.total), 300, 'bold 15px Segoe UI').slice(0,2).forEach((line,lineIndex)=>ctx.fillText(line, 590, priceY + lineIndex*18));
       quoteY += rowHeight;
     });
     y += blockHeight + 22;
   });
   const link = document.createElement('a');
-  link.download = 'Tender-' + (record.customerName || 'Result').replaceAll(' ', '-') + '-Mobile.png';
+  link.download = 'Tender-' + (record.customerName || 'Result').replaceAll(' ', '-') + '-9x20.png';
   link.href = canvas.toDataURL('image/png'); link.click();
 }
 function renderVisualAnalytics(shown) {
