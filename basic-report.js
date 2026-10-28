@@ -86,7 +86,7 @@ async function generateImage(record) {
     }));
     const specHeight = 68 + specs.reduce((sum, row) => sum + Math.max(34, row.lines.length * 32 + 10), 0);
     const quoteHeight = 68 + quotes.reduce((sum, row) => sum + Math.max(76, Math.max(row.name.length, row.model.length) * 34 + rowPad), 0);
-    const height = 150 + specHeight + 24 + quoteHeight + 36;
+    const height = 120 + specHeight + 24 + quoteHeight + 36;
     prepared.push({card, itemIndex, specs, quotes, height, specHeight, quoteHeight});
     totalHeight += height + 22;
   });
@@ -101,15 +101,15 @@ async function generateImage(record) {
   const ctx = canvas.getContext('2d');
   ctx.scale(scale, scale);
   ctx.fillStyle = '#f3f5f9'; ctx.fillRect(0, 0, W, totalHeight);
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, 260);
-  ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 10, 260);
-  ctx.fillStyle = '#29242b'; ctx.font = fontTitle; ctx.fillText('TENDER RESULT', margin, 60);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, 220);
+  ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 10, 220);
+  ctx.fillStyle = '#29242b'; ctx.font = fontTitle; ctx.fillText('TENDER RESULT', margin, 52);
   ctx.fillStyle = '#65146d'; ctx.font = 'bold 28px Arial';
-  ctx.fillText(wrap(record.customerName || 'Customer', 'bold 28px Arial', contentW)[0], margin, 125);
+  ctx.fillText(wrap(record.customerName || 'Customer', 'bold 28px Arial', contentW)[0], margin, 100);
   ctx.fillStyle = '#625a66'; ctx.font = fontSmall;
-  ctx.fillText('Account holder: ' + String(record.accountHolderName || '-'), margin, 185);
-  ctx.fillText('Closing date: ' + String(record.closingDate || '-'), margin, 230);
-  let y = 282;
+  ctx.fillText('Account holder: ' + String(record.accountHolderName || '-'), margin, 140);
+  ctx.fillText('Closing date: ' + String(record.closingDate || '-'), margin, 175);
+  let y = 242;
   prepared.forEach(section => {
     const card = section.card;
     ctx.fillStyle = '#eee7f2'; ctx.fillRect(margin, y, contentW, 76);
