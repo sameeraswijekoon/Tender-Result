@@ -82,7 +82,7 @@ async function generateImage(record) {
     // Split quotes only when needed; the complete bidder list is preserved across pages.
     const headerH = orientation === 'landscape' ? 190 : 220;
     const specsH = orientation === 'landscape' ? 430 : 470;
-    const quoteH = orientation === 'landscape' ? 142 : 175;
+    const quoteH = orientation === 'landscape' ? 190 : 225;
     const topY = headerH;
     const firstAvailable = H - (topY + 78 + specsH + 45 + 80);
     const nextAvailable = H - (topY + 78 + 60 + 45 + 80);
@@ -148,7 +148,7 @@ async function generateImage(record) {
     }
     ctx.fillStyle = '#28232b'; ctx.font = 'bold 24px Arial'; ctx.fillText('BIDDER PRICE COMPARISON',margin,y+27);
     y += 45;
-    const cardH = orientation === 'landscape' ? 142 : 175;
+    const cardH = orientation === 'landscape' ? 190 : 225;
     page.quotes.forEach((quote,index) => {
       const isWinner = page.first && index === 0;
       ctx.fillStyle = isWinner ? '#e6f6ec' : '#ffffff';
@@ -161,20 +161,22 @@ async function generateImage(record) {
       ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial';
       const nameLines = wrapText(ctx,quote.name || 'Unnamed bidder',contentWidth);
       ctx.fillText(nameLines[0],innerX,y+30);
-      ctx.fillStyle = '#5e5661'; ctx.font = '16px Arial'; ctx.fillText('MODEL',margin+16,y+61);
+      if (nameLines[1]) ctx.fillText(nameLines[1],innerX,y+52);
+      ctx.fillStyle = '#5e5661'; ctx.font = '16px Arial'; ctx.fillText('MODEL',margin+16,y+80);
       ctx.fillStyle = '#28232b'; ctx.font = '18px Arial';
       const modelLines = wrapText(ctx,quote.model || '-',contentWidth);
-      ctx.fillText(modelLines[0],innerX,y+61);
+      ctx.fillText(modelLines[0],innerX,y+80);
+      if (modelLines[1]) ctx.fillText(modelLines[1],innerX,y+101);
       if (orientation === 'landscape') {
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+100);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+100);
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',W/2+60,y+100);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.total),W/2+210,y+100);
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+145);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+145);
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',W/2+60,y+145);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.total),W/2+210,y+145);
       } else {
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+103);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+103);
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',margin+16,y+142);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.total),innerX,y+142);
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+145);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+145);
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',margin+16,y+188);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.total),innerX,y+188);
       }
       y += cardH;
     });
