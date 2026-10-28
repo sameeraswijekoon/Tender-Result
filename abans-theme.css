@@ -50,3 +50,70 @@ input,select{height:44px!important;padding:10px 12px!important;font-size:15px!im
 
 /* Expanded specification filters */
 .advanced-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px}.advanced-filters #search{grid-column:span 2}.advanced-filters #clear{align-self:stretch}@media(max-width:900px){.advanced-filters{grid-template-columns:repeat(3,minmax(0,1fr))!important}.advanced-filters #search{grid-column:span 2}}@media(max-width:600px){.advanced-filters{grid-template-columns:1fr!important}.advanced-filters #search{grid-column:span 1}}
+
+/* UI fix 2026-10-28: stop button overlap, larger readable fonts everywhere.
+   This file loads after styles.css on both pages, so these rules win. */
+/* Header: let brand and nav wrap instead of colliding */
+.topbar{height:auto!important;min-height:72px;flex-wrap:wrap;gap:8px 18px;padding-top:10px;padding-bottom:10px}
+.app-title{display:flex!important;flex-wrap:wrap;gap:8px;align-items:center}
+.app-title .nav-link{white-space:nowrap;padding:10px 14px!important;font-size:14px!important}
+.brand strong{font-size:15px!important}.brand span{font-size:12.5px!important}
+/* Section headings and their button groups wrap cleanly */
+.section-heading,.panel-title{flex-wrap:wrap}
+.title-actions{flex-wrap:wrap;gap:8px}
+.heading-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.heading-actions .button{white-space:nowrap}
+.cloud-actions{flex-wrap:wrap}
+.cloud-actions>div{display:flex;gap:10px;flex-wrap:wrap}
+.cloud-actions .button+.button{margin-left:0!important}
+/* Buttons: comfortable size, never squeezed */
+.button{min-height:44px;padding:10px 16px!important;font-size:14.5px!important;line-height:1.3;display:inline-flex;align-items:center;justify-content:center}
+.button.small{min-height:38px;padding:8px 12px!important;font-size:13.5px!important}
+.button:disabled{opacity:.45;cursor:default}
+/* Records table: readable text, action buttons wrap inside their cell instead of overlapping */
+.management-table{font-size:15px!important}
+.management-table th{font-size:12.5px!important;padding:13px 14px!important}
+.management-table td{padding:14px!important}
+.management-table p{font-size:13.5px!important}
+.management-table th:last-child,.management-table td:last-child{min-width:196px}
+.row-actions{white-space:normal!important}
+.row-actions{display:flex;flex-wrap:wrap;gap:6px}
+.row-actions .button{margin-right:0!important}
+.item-detail table{font-size:14px!important}
+.item-detail th{font-size:11.5px!important}
+.item-detail p{font-size:13.5px!important}
+.item-detail h3{font-size:15.5px!important}
+.record-spec-grid strong{font-size:12px!important}
+.record-spec-grid span{font-size:14px!important}
+.record-specifications h4{font-size:14px!important}
+/* KPI, charts and small print: bumped up */
+.kpi-grid strong{font-size:20px!important}
+.kpi-grid span{font-size:13.5px!important}
+.mini-chart>div{font-size:13.5px!important;grid-template-columns:112px 170px 30px}
+.bar-row{font-size:13.5px!important}
+.visual-card .eyebrow{font-size:11.5px!important}
+.visual-card h3{font-size:16.5px!important}
+.ring-layout p{font-size:13.5px!important}
+.leader-bars>div{font-size:13.5px!important}
+.gap-labels span{font-size:11.5px!important}
+.chart-empty{font-size:13.5px!important}
+.insight-pill,.chart-caption{font-size:12px!important}
+.cloud-status{font-size:14px!important}
+.badge{font-size:13px!important}
+.status-final,.status-draft{font-size:12px!important;padding:5px 10px!important}
+.rank{font-size:12px!important;min-width:30px;height:25px}
+.price-block small{font-size:13px!important}
+.dashboard-note{font-size:14.5px!important}
+/* Pagination bar */
+.pagination{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-top:16px}
+.pagination .cloud-status{font-weight:600;color:var(--text)}
+/* Small screens: stack header, full-width heading buttons, no overlap */
+@media(max-width:760px){
+  .topbar{flex-direction:column;align-items:flex-start}
+  .heading-actions{width:100%}
+  .heading-actions .button{flex:1 1 auto}
+  .cloud-actions>div{width:100%}
+  .cloud-actions .button{flex:1 1 auto}
+  .pagination{justify-content:space-between}
+  .management-table th:last-child,.management-table td:last-child{min-width:170px}
+}

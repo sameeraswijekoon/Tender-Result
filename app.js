@@ -6,6 +6,36 @@ const num = value => Number(value) || 0;
 function normalizeSearch(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 const storageKey = 'abansTenderDraft';
 const firebaseUrl = 'https://tender-reading-management-default-rtdb.firebaseio.com';
+const defaultAccountHolders = ['Monique','Mahesh','Vithushan','Keshan','Sathsara','Kanchana','Dinith','Yoshitha','Harsha','Sanula','Lasitha','Humaid','Thilini'];
+let sharedAccountHolders = [...defaultAccountHolders];
+function renderAccountHolders() {
+  const list = document.querySelector('#accountHolders');
+  if (!list) return;
+  list.innerHTML = sharedAccountHolders.map(name => `<option value="${name.replaceAll('&','&amp;').replaceAll('"','&quot;')}"></option>`).join('');
+}
+async function loadAccountHolders() {
+  // Shared list = built-in names + every account holder name already saved on a
+  // Firebase tender. The database rules only open the tenders path, so names are
+  // shared through the tender records themselves: a new name typed on a tender
+  // becomes visible to everyone as soon as that tender is saved.
+  try {
+    const response = await fetch(`${firebaseUrl}/tenders.json`);
+    if (!response.ok) return;
+    const data = await response.json() || {};
+    const merged = [...defaultAccountHolders];
+    Object.values(data).forEach(tender => { const clean = String((tender && tender.accountHolderName) || '').trim(); if (clean && !merged.some(item => item.toLowerCase() === clean.toLowerCase())) merged.push(clean); });
+    sharedAccountHolders = merged;
+    renderAccountHolders();
+  } catch (error) { /* keep the built-in list when Firebase is unreachable */ }
+}
+async function shareAccountHolder(name) {
+  // No separate write needed: saveCloud stores this name on the tender itself,
+  // and loadAccountHolders picks it up from there for everyone else.
+  const clean = String(name || '').trim();
+  if (!clean || sharedAccountHolders.some(item => item.toLowerCase() === clean.toLowerCase())) return;
+  sharedAccountHolders = [...sharedAccountHolders, clean];
+  renderAccountHolders();
+}
 let cloudTenderId = localStorage.getItem('abansCloudTenderId') || '';
 let cloudCreatedAt = localStorage.getItem('abansCloudCreatedAt') || '';
 let offlineTenderId = localStorage.getItem('abansOfflineTenderId') || '';
@@ -160,7 +190,8 @@ function renderResults() {
     const rows = quotes.map((quote, rank) => {
       const gap = quote.isAbans ? quote.unit - lowestPrice : null;
       const label = `L${rank + 1}`;
-      const gapText = gap === null ? '-' : gap === 0 ? 'Lowest bid' : `${fmt.format(gap)} above lowest`;
+      const gapPct = gap !== null && lowestPrice ? (gap / lowestPrice * 100).toFixed(1) : null;
+      const gapText = gap === null ? '-' : gap === 0 ? 'Lowest bid' : `${fmt.format(gap)} (${gapPct}%) above lowest`;
       return `<tr><td class="${rank === 0 ? 'lowest' : ''}"><span class="rank ${rank === 0 ? 'rank-l1' : ''}">${label}</span>${quote.name}${rank === 0 ? ' (Lowest)' : ''}</td><td>${quote.model}</td><td class="money">${fmt.format(quote.unit)}</td><td class="money">${fmt.format(quote.total)}</td><td class="money ${gap > 0 ? 'gap-positive' : gap < 0 ? 'gap-negative' : ''}">${gapText}</td></tr>`;
     }).join('');
     const name = card.querySelector('.item-name').value || `Item ${index + 1}`;
@@ -194,6 +225,7 @@ async function saveCloud(status) {
   data.updatedAt = new Date().toISOString();
   if (!data.createdAt) { cloudCreatedAt = new Date().toISOString(); localStorage.setItem('abansCloudCreatedAt', cloudCreatedAt); data.createdAt = cloudCreatedAt; }
   setCloudStatus('Saving to Firebase...');
+  await shareAccountHolder(data.accountHolderName);
   try {
     const url = cloudTenderId ? `${firebaseUrl}/tenders/${cloudTenderId}.json` : `${firebaseUrl}/tenders.json`;
     const response = await fetch(url, { method: cloudTenderId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -369,7 +401,7 @@ function generateImage() {
     ctx.fillText(item.specs.slice(0, 2).join('     |     '), 65, y + 67);
     ctx.fillText(item.specs.slice(2, 4).join('     |     '), 65, y + 88);
     ctx.fillText(item.specs.slice(4).join('     |     '), 65, y + 109);
-    const headerY = y + 138, columns = [70, 355, 835, 1090, 1280];
+    const headerY = y + 138, columns = [70, 340, 800, 1055, 1240];
     ctx.fillStyle = '#f7f4f8'; ctx.fillRect(46, headerY - 20, width - 92, 28);
     ctx.fillStyle = '#766d78'; ctx.font = 'bold 12px Segoe UI'; ['RANK', 'BIDDER', 'UNIT PRICE', 'TOTAL PRICE', 'ABANS GAP'].forEach((text, i) => ctx.fillText(text, columns[i], headerY));
     item.quotes.forEach((quote, rank) => {
@@ -378,7 +410,7 @@ function generateImage() {
       const gap = quote.isAbans ? quote.unit - item.quotes[0].unit : null;
       ctx.fillStyle = rank === 0 ? '#168453' : '#29242b'; ctx.font = 'bold 15px Segoe UI';
       ctx.fillText(`L${rank + 1}`, columns[0], rowY); ctx.fillText(quote.name, columns[1], rowY); ctx.fillText(fmt.format(quote.unit), columns[2], rowY); ctx.fillText(fmt.format(quote.total), columns[3], rowY);
-      ctx.fillStyle = gap > 0 ? '#c05621' : '#168453'; ctx.fillText(gap === null ? '-' : gap === 0 ? 'Lowest bid' : `${fmt.format(gap)} above`, columns[4], rowY);
+      ctx.fillStyle = gap > 0 ? '#c05621' : '#168453'; ctx.fillText(gap === null ? '-' : gap === 0 ? 'Lowest bid' : `${fmt.format(gap)} (+${(gap / item.quotes[0].unit * 100).toFixed(1)}%)`, columns[4], rowY);
     });
     y += blockHeight + 20;
   });
@@ -395,6 +427,7 @@ document.querySelector('#saveFinal').onclick = () => saveCloud('final');
 document.querySelector('#customerName').addEventListener('input', saveData);
 document.querySelector('#accountHolderName').addEventListener('input', saveData);
 document.querySelector('#closingDate').addEventListener('change', saveData);
+loadAccountHolders();
 if (!restoreData()) addItem();
 const pendingCloudTenderId = localStorage.getItem('abansOpenCloudTenderId');
 if (pendingCloudTenderId) { localStorage.removeItem('abansOpenCloudTenderId'); openCloudTender(pendingCloudTenderId); }
