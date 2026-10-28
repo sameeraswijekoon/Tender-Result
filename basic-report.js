@@ -85,7 +85,7 @@ async function generateImage(record) {
       model:wrap(quote.model || '-', fontSmall, 300)
     }));
     const specHeight = 68 + specs.reduce((sum, row) => sum + Math.max(34, row.lines.length * 32 + 10), 0);
-    const quoteHeight = 58 + quotes.reduce((sum, row) => sum + Math.max(64, Math.max(row.name.length, row.model.length) * 27 + rowPad), 0);
+    const quoteHeight = 68 + quotes.reduce((sum, row) => sum + Math.max(76, Math.max(row.name.length, row.model.length) * 34 + rowPad), 0);
     const height = 94 + specHeight + 24 + quoteHeight + 36;
     prepared.push({card, itemIndex, specs, quotes, height, specHeight, quoteHeight});
     totalHeight += height + 22;
@@ -131,7 +131,7 @@ async function generateImage(record) {
     });
     y += section.specHeight + 24;
     const tableX = margin, tableW = contentW;
-    const cols = [70, 280, 280, 240, tableW - 870];
+    const cols = [70, 280, 280, 240, tableW - 898];
     const headers = ['RANK', 'BIDDER', 'MODEL', 'UNIT PRICE', 'TOTAL PRICE'];
     ctx.fillStyle = '#65146d'; ctx.fillRect(tableX, y, tableW, 68);
     let x = tableX + 14;
