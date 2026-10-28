@@ -92,8 +92,9 @@ async function generateImage(record) {
     const specHalf = Math.ceil(specs.length / 2);
     const specPairs = [];
     for (let i = 0; i < specHalf; i++) { const pair = [specs[i]]; if (specs[specHalf + i]) pair.push(specs[specHalf + i]); specPairs.push(pair); }
-    const specRowsHeight = specPairs.reduce((sum, pair) => sum + Math.max(...pair.map(row => Math.max(34, row.lines.length * 32 + 10))), 0);
-    const specHeight = 64 + specRowsHeight;
+    const specRowH = pair => Math.max(...pair.map(row => Math.max(44, row.lines.length * 32 + 12)));
+    const specRowsHeight = specPairs.reduce((sum, pair) => sum + specRowH(pair), 0);
+    const specHeight = 66 + specRowsHeight;
     const quoteHeight = 68 + quotes.reduce((sum, row) => sum + Math.max(76, Math.max(row.name.length, row.model.length) * 32 + 28), 0);
     const height = 72 + specHeight + 24 + quoteHeight + 36;
     prepared.push({card, itemIndex, specs, specPairs, quotes, height, specHeight, quoteHeight});
@@ -129,29 +130,30 @@ async function generateImage(record) {
     ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin, y, contentW, section.specHeight);
     ctx.fillStyle = '#29242b'; ctx.font = fontHead; ctx.fillText('SPECIFICATIONS', margin + 18, y + 34);
     const specColW = Math.floor(contentW / 2);
-    ctx.strokeStyle = '#ccd6e1'; ctx.beginPath(); ctx.moveTo(margin + specColW, y + 52); ctx.lineTo(margin + specColW, y + section.specHeight - 10); ctx.stroke();
-    let sy = y + 64;
+    ctx.lineWidth = 2; ctx.strokeStyle = '#ccd6e1'; ctx.beginPath(); ctx.moveTo(margin + specColW, y + 54); ctx.lineTo(margin + specColW, y + section.specHeight - 6); ctx.stroke(); ctx.lineWidth = 1;
+    let slotTop = y + 58;
     for (let i = 0; i < section.specPairs.length; i++) {
       const pair = section.specPairs[i];
-      const rowH = Math.max(...pair.map(row => Math.max(34, row.lines.length * 32 + 10)));
+      const rowH = Math.max(...pair.map(row => Math.max(44, row.lines.length * 32 + 12)));
+      const base = slotTop + 32;
       pair.forEach((row, j) => {
         const cellX = margin + j * specColW;
         ctx.fillStyle = '#625a66'; ctx.font = 'bold ' + fontSmall;
-        ctx.fillText(row.label, cellX + 18, sy);
+        ctx.fillText(row.label, cellX + 18, base);
         ctx.fillStyle = '#29242b'; ctx.font = fontBody;
-        row.lines.forEach((line, li) => ctx.fillText(line, cellX + 252, sy + li * 32));
+        row.lines.forEach((line, li) => ctx.fillText(line, cellX + 252, base + li * 32));
       });
-      sy += rowH;
-      if (i + 1 < section.specPairs.length) { ctx.strokeStyle = '#dde5ed'; ctx.beginPath(); ctx.moveTo(margin + 14, sy - 6); ctx.lineTo(margin + contentW - 14, sy - 6); ctx.stroke(); }
+      if (i + 1 < section.specPairs.length) { ctx.lineWidth = 2; ctx.strokeStyle = '#d3dde7'; ctx.beginPath(); ctx.moveTo(margin + 14, slotTop + rowH); ctx.lineTo(margin + contentW - 14, slotTop + rowH); ctx.stroke(); ctx.lineWidth = 1; }
+      slotTop += rowH;
     }
     y += section.specHeight + 24;
     const tableX = margin, tableW = contentW;
     const cols = [96, 300, 300, 264, tableW - 960];
     const colX = [tableX]; cols.forEach(w => colX.push(colX[colX.length - 1] + w));
     ctx.fillStyle = '#65146d'; ctx.fillRect(tableX, y, tableW, 68);
-    ctx.strokeStyle = '#ffffff55'; ctx.beginPath();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff55'; ctx.beginPath();
     for (let i = 1; i < cols.length; i++) { ctx.moveTo(colX[i], y + 10); ctx.lineTo(colX[i], y + 58); }
-    ctx.stroke();
+    ctx.stroke(); ctx.lineWidth = 1;
     ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'left';
     ctx.fillText('RANK', colX[0] + 16, y + 43);
     ctx.fillText('BIDDER', colX[1] + 14, y + 43);
@@ -182,9 +184,9 @@ async function generateImage(record) {
       ctx.textAlign = 'left';
       y += rh;
     });
-    ctx.strokeStyle = '#bfcddd'; ctx.beginPath();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#bfcddd'; ctx.beginPath();
     for (let i = 1; i < cols.length; i++) { ctx.moveTo(colX[i], tableTop + 68); ctx.lineTo(colX[i], y); }
-    ctx.stroke();
+    ctx.stroke(); ctx.lineWidth = 1;
     y += 36;
   });
   ctx.fillStyle = '#746b76'; ctx.font = '20px Arial';
