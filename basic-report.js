@@ -89,12 +89,14 @@ async function generateImage(record) {
       name:wrap(quote.name || 'Unnamed bidder', fontBody, 272),
       model:wrap(quote.model || '-', fontSmall, 272)
     }));
-    let specRowsHeight = 0;
-    for (let i = 0; i < specs.length; i += 2) specRowsHeight += Math.max(...specs.slice(i, i + 2).map(row => Math.max(34, row.lines.length * 32 + 10)));
+    const specHalf = Math.ceil(specs.length / 2);
+    const specPairs = [];
+    for (let i = 0; i < specHalf; i++) { const pair = [specs[i]]; if (specs[specHalf + i]) pair.push(specs[specHalf + i]); specPairs.push(pair); }
+    const specRowsHeight = specPairs.reduce((sum, pair) => sum + Math.max(...pair.map(row => Math.max(34, row.lines.length * 32 + 10))), 0);
     const specHeight = 64 + specRowsHeight;
-    const quoteHeight = 68 + quotes.reduce((sum, row) => sum + Math.max(76, Math.max(row.name.length, row.model.length) * 34 + rowPad), 0);
+    const quoteHeight = 68 + quotes.reduce((sum, row) => sum + Math.max(76, Math.max(row.name.length, row.model.length) * 32 + 28), 0);
     const height = 72 + specHeight + 24 + quoteHeight + 36;
-    prepared.push({card, itemIndex, specs, quotes, height, specHeight, quoteHeight});
+    prepared.push({card, itemIndex, specs, specPairs, quotes, height, specHeight, quoteHeight});
     totalHeight += height + 22;
   });
   totalHeight = Math.max(600, totalHeight);
@@ -129,8 +131,8 @@ async function generateImage(record) {
     const specColW = Math.floor(contentW / 2);
     ctx.strokeStyle = '#e8edf3'; ctx.beginPath(); ctx.moveTo(margin + specColW, y + 52); ctx.lineTo(margin + specColW, y + section.specHeight - 10); ctx.stroke();
     let sy = y + 64;
-    for (let i = 0; i < section.specs.length; i += 2) {
-      const pair = section.specs.slice(i, i + 2);
+    for (let i = 0; i < section.specPairs.length; i++) {
+      const pair = section.specPairs[i];
       const rowH = Math.max(...pair.map(row => Math.max(34, row.lines.length * 32 + 10)));
       pair.forEach((row, j) => {
         const cellX = margin + j * specColW;
@@ -140,7 +142,7 @@ async function generateImage(record) {
         row.lines.forEach((line, li) => ctx.fillText(line, cellX + 252, sy + li * 32));
       });
       sy += rowH;
-      if (i + 2 < section.specs.length) { ctx.strokeStyle = '#eef1f5'; ctx.beginPath(); ctx.moveTo(margin + 14, sy - 6); ctx.lineTo(margin + contentW - 14, sy - 6); ctx.stroke(); }
+      if (i + 1 < section.specPairs.length) { ctx.strokeStyle = '#eef1f5'; ctx.beginPath(); ctx.moveTo(margin + 14, sy - 6); ctx.lineTo(margin + contentW - 14, sy - 6); ctx.stroke(); }
     }
     y += section.specHeight + 24;
     const tableX = margin, tableW = contentW;
@@ -158,28 +160,31 @@ async function generateImage(record) {
     ctx.fillText('UNIT PRICE', colX[4] - 16, y + 43);
     ctx.fillText('TOTAL PRICE', colX[5] - 16, y + 43);
     ctx.textAlign = 'left';
-    ctx.strokeStyle = '#dfe5ec'; ctx.beginPath();
-    for (let i = 1; i < cols.length; i++) { ctx.moveTo(colX[i], y + 68); ctx.lineTo(colX[i], y + section.quoteHeight); }
-    ctx.stroke();
+    const tableTop = y;
     y += 68;
     section.quotes.forEach((row, index) => {
       const lines = Math.max(row.name.length, row.model.length, 1);
-      const rh = Math.max(76, lines * 34 + rowPad);
+      const rh = Math.max(76, lines * 32 + 28);
       ctx.fillStyle = row.rank === 1 ? '#e4f5eb' : (index % 2 ? '#fff' : '#f9fafc');
       ctx.fillRect(tableX, y, tableW, rh);
       ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(tableX, y, tableW, rh);
+      const centreY = y + rh / 2 + 9;
+      const firstLineY = y + (rh - (lines - 1) * 32) / 2 + 9;
       ctx.fillStyle = row.rank === 1 ? '#126b42' : '#29242b';
-      ctx.font = 'bold ' + fontBody; ctx.fillText('L' + row.rank, colX[0] + 16, y + rh / 2 + 7);
+      ctx.font = 'bold ' + fontBody; ctx.fillText('L' + row.rank, colX[0] + 16, centreY);
       ctx.fillStyle = '#29242b'; ctx.font = fontBody;
-      row.name.forEach((line, i) => ctx.fillText(line, colX[1] + 14, y + 32 + i * 34));
+      row.name.forEach((line, i) => ctx.fillText(line, colX[1] + 14, firstLineY + i * 32));
       ctx.font = fontSmall;
-      row.model.forEach((line, i) => ctx.fillText(line, colX[2] + 14, y + 26 + i * 27));
+      row.model.forEach((line, i) => ctx.fillText(line, colX[2] + 14, firstLineY + i * 32));
       ctx.font = fontBody; ctx.textAlign = 'right';
-      ctx.fillText(money.format(row.quote.unit), colX[4] - 16, y + rh / 2 + 6);
-      ctx.fillText(money.format(row.quote.total), colX[5] - 16, y + rh / 2 + 6);
+      ctx.fillText(money.format(row.quote.unit), colX[4] - 16, centreY);
+      ctx.fillText(money.format(row.quote.total), colX[5] - 16, centreY);
       ctx.textAlign = 'left';
       y += rh;
     });
+    ctx.strokeStyle = '#dfe5ec'; ctx.beginPath();
+    for (let i = 1; i < cols.length; i++) { ctx.moveTo(colX[i], tableTop + 68); ctx.lineTo(colX[i], y); }
+    ctx.stroke();
     y += 36;
   });
   ctx.fillStyle = '#746b76'; ctx.font = '20px Arial';
