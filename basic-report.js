@@ -76,7 +76,7 @@ async function generateImage(record) {
   items.forEach((item, itemIndex) => {
     const card = item.card;
     const fields = [
-      ['Quantity', card.qty], ['Category', card.category], ['Quoted model', card.model],
+      ['Category', card.category], ['Quoted model', card.model],
       ['Processor', card.processor], ['RAM', card.ram], ['Storage', card.storage],
       ['Display / monitor', card.display || card.monitor], ['Warranty', card.warranty],
       ['Local purchase 1', card.localPurchase1], ['Local purchase 2', card.localPurchase2],
@@ -129,7 +129,7 @@ async function generateImage(record) {
     ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin, y, contentW, section.specHeight);
     ctx.fillStyle = '#29242b'; ctx.font = fontHead; ctx.fillText('SPECIFICATIONS', margin + 18, y + 34);
     const specColW = Math.floor(contentW / 2);
-    ctx.strokeStyle = '#e8edf3'; ctx.beginPath(); ctx.moveTo(margin + specColW, y + 52); ctx.lineTo(margin + specColW, y + section.specHeight - 10); ctx.stroke();
+    ctx.strokeStyle = '#ccd6e1'; ctx.beginPath(); ctx.moveTo(margin + specColW, y + 52); ctx.lineTo(margin + specColW, y + section.specHeight - 10); ctx.stroke();
     let sy = y + 64;
     for (let i = 0; i < section.specPairs.length; i++) {
       const pair = section.specPairs[i];
@@ -142,7 +142,7 @@ async function generateImage(record) {
         row.lines.forEach((line, li) => ctx.fillText(line, cellX + 252, sy + li * 32));
       });
       sy += rowH;
-      if (i + 1 < section.specPairs.length) { ctx.strokeStyle = '#eef1f5'; ctx.beginPath(); ctx.moveTo(margin + 14, sy - 6); ctx.lineTo(margin + contentW - 14, sy - 6); ctx.stroke(); }
+      if (i + 1 < section.specPairs.length) { ctx.strokeStyle = '#dde5ed'; ctx.beginPath(); ctx.moveTo(margin + 14, sy - 6); ctx.lineTo(margin + contentW - 14, sy - 6); ctx.stroke(); }
     }
     y += section.specHeight + 24;
     const tableX = margin, tableW = contentW;
@@ -182,7 +182,7 @@ async function generateImage(record) {
       ctx.textAlign = 'left';
       y += rh;
     });
-    ctx.strokeStyle = '#dfe5ec'; ctx.beginPath();
+    ctx.strokeStyle = '#bfcddd'; ctx.beginPath();
     for (let i = 1; i < cols.length; i++) { ctx.moveTo(colX[i], tableTop + 68); ctx.lineTo(colX[i], y); }
     ctx.stroke();
     y += 36;
