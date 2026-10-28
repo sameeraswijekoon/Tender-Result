@@ -223,15 +223,17 @@ function analyseTender(tender) {
   return { comparisons, winner: winner ? `${winner[0]} (${winner[1]} L1)` : '-', avgGap: gaps.length ? gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length : null, abansL1: comparisons.filter(result => result.lowest.name === 'Abans Computer').length };
 }
 
+function normalizeSearch(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
 function renderDashboard() {
   const records = document.querySelector('#cloudRecords');
   const summary = document.querySelector('#reportSummary');
-  const term = document.querySelector('#reportSearch').value.toLowerCase().trim();
+  const term = normalizeSearch(document.querySelector('#reportSearch').value);
   const status = document.querySelector('#reportStatus').value;
   const from = document.querySelector('#reportFrom').value;
   const to = document.querySelector('#reportTo').value;
   const tenders = allCloudTenders.filter(tender => {
-    const haystack = `${tender.customerName || ''} ${(tender.cards || []).map(card => `${card.name || ''} ${(card.bidders || []).map(bidder => bidder.name || '').join(' ')}`).join(' ')}`.toLowerCase();
+    const haystack = normalizeSearch(`${tender.customerName || ''} ${tender.accountHolderName || ''} ${(tender.cards || []).map(card => [card.name, card.category, card.model, card.processor, card.ram, card.storage, card.display, card.warranty, card.localPurchase1, card.localPurchase2, card.localPurchase3, ...(card.bidders || []).flatMap(bidder => [bidder.name, bidder.model])].join(' ')).join(' ')}`);
     const date = String(tender.updatedAt || '').slice(0, 10);
     return (!term || haystack.includes(term)) && (status === 'all' || tender.status === status) && (!from || date >= from) && (!to || date <= to);
   });
