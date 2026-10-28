@@ -61,10 +61,10 @@ async function generateImage(record) {
     if (line) lines.push(line);
     return lines.length ? lines : ['-'];
   };
-  const fontTitle = 'bold 34px Arial';
-  const fontHead = 'bold 23px Arial';
-  const fontBody = '20px Arial';
-  const fontSmall = '17px Arial';
+  const fontTitle = 'bold 42px Arial';
+  const fontHead = 'bold 29px Arial';
+  const fontBody = '25px Arial';
+  const fontSmall = '22px Arial';
   const rowPad = 18;
   const prepared = [];
   let totalHeight = 250 + 30;
@@ -84,7 +84,7 @@ async function generateImage(record) {
       name:wrap(quote.name || 'Unnamed bidder', fontBody, 300),
       model:wrap(quote.model || '-', fontSmall, 300)
     }));
-    const specHeight = 68 + specs.reduce((sum, row) => sum + Math.max(34, row.lines.length * 26 + 8), 0);
+    const specHeight = 68 + specs.reduce((sum, row) => sum + Math.max(34, row.lines.length * 32 + 10), 0);
     const quoteHeight = 58 + quotes.reduce((sum, row) => sum + Math.max(64, Math.max(row.name.length, row.model.length) * 27 + rowPad), 0);
     const height = 94 + specHeight + 24 + quoteHeight + 36;
     prepared.push({card, itemIndex, specs, quotes, height, specHeight, quoteHeight});
@@ -126,21 +126,21 @@ async function generateImage(record) {
       ctx.fillStyle = '#625a66'; ctx.font = 'bold ' + fontSmall;
       ctx.fillText(row.label, margin + 18, sy);
       ctx.fillStyle = '#29242b'; ctx.font = fontBody;
-      row.lines.forEach((line, i) => ctx.fillText(line, margin + 260, sy + i * 26));
-      sy += Math.max(34, row.lines.length * 26 + 8);
+      row.lines.forEach((line, i) => ctx.fillText(line, margin + 260, sy + i * 32));
+      sy += Math.max(34, row.lines.length * 32 + 10);
     });
     y += section.specHeight + 24;
     const tableX = margin, tableW = contentW;
-    const cols = [72, 320, 320, 220, tableW - 960];
+    const cols = [70, 280, 280, 240, tableW - 870];
     const headers = ['RANK', 'BIDDER', 'MODEL', 'UNIT PRICE', 'TOTAL PRICE'];
-    ctx.fillStyle = '#65146d'; ctx.fillRect(tableX, y, tableW, 58);
+    ctx.fillStyle = '#65146d'; ctx.fillRect(tableX, y, tableW, 68);
     let x = tableX + 14;
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 17px Arial';
-    headers.forEach((header, i) => { ctx.fillText(header, x, y + 36); x += cols[i]; });
-    y += 58;
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 21px Arial';
+    headers.forEach((header, i) => { ctx.fillText(header, x, y + 43); x += cols[i]; });
+    y += 68;
     section.quotes.forEach((row, index) => {
       const lines = Math.max(row.name.length, row.model.length, 1);
-      const rh = Math.max(64, lines * 27 + rowPad);
+      const rh = Math.max(76, lines * 34 + rowPad);
       ctx.fillStyle = row.rank === 1 ? '#e4f5eb' : (index % 2 ? '#fff' : '#f9fafc');
       ctx.fillRect(tableX, y, tableW, rh);
       ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(tableX, y, tableW, rh);
@@ -148,7 +148,7 @@ async function generateImage(record) {
       ctx.fillStyle = row.rank === 1 ? '#126b42' : '#29242b';
       ctx.font = 'bold ' + fontBody; ctx.fillText('L' + row.rank, cx, y + rh / 2 + 7); cx += cols[0];
       ctx.fillStyle = '#29242b'; ctx.font = fontBody;
-      row.name.forEach((line, i) => ctx.fillText(line, cx, y + 26 + i * 27)); cx += cols[1];
+      row.name.forEach((line, i) => ctx.fillText(line, cx, y + 32 + i * 34)); cx += cols[1];
       ctx.font = fontSmall;
       row.model.forEach((line, i) => ctx.fillText(line, cx, y + 26 + i * 27)); cx += cols[2];
       ctx.fillText(money.format(row.quote.unit), cx, y + rh / 2 + 6); cx += cols[3];
@@ -157,7 +157,7 @@ async function generateImage(record) {
     });
     y += 36;
   });
-  ctx.fillStyle = '#746b76'; ctx.font = '16px Arial';
+  ctx.fillStyle = '#746b76'; ctx.font = '20px Arial';
   ctx.fillText('Abans Computer | Tender price comparison', margin, totalHeight - 18);
   const link = document.createElement('a');
   link.download = 'Tender-' + String(record.customerName || 'Result').replace(/[^a-z0-9]+/gi, '-') + '.png';
