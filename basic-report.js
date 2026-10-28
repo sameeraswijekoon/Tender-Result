@@ -44,164 +44,161 @@ function details(record) {
 
 function editTender(record) { localStorage.setItem('abansTenderDraft', JSON.stringify({ ...record, cloudTenderId: record.id, expiresAt: Date.now() + 2 * 60 * 60 * 1000 })); localStorage.setItem('abansCloudTenderId', record.id); location.href = 'index.html'; }
 async function deleteTender(record) { if (!confirm(`Delete tender for ${record.customerName || 'this customer'}? This cannot be undone.`)) return; try { const response = await fetch(`https://tender-reading-management-default-rtdb.firebaseio.com/tenders/${record.id}.json`, { method: 'DELETE' }); if (!response.ok) throw new Error(); records = records.filter(item => item.id !== record.id); draw(); alert('Tender deleted from Firebase.'); } catch { alert('Could not delete from Firebase. Check your database connection and rules.'); } }
-function generateImage(record) { const analysis=tenderAnalysis(record), width=1500, line=42, height=180+analysis.items.reduce((sum,item)=>sum+105+item.analysis.quotes.length*line,0), canvas=document.createElement('canvas');canvas.width=width*2;canvas.height=height*2;const ctx=canvas.getContext('2d');ctx.scale(2,2);ctx.fillStyle='#f5f8fc';ctx.fillRect(0,0,width,height);ctx.fillStyle='#102a43';ctx.font='bold 26px Segoe UI';ctx.fillText(record.customerName||'Tender Result',45,48);ctx.font='17px Segoe UI';ctx.fillStyle='#486581';ctx.fillText(`Account Holder: ${record.accountHolderName||'-'}     Closing Date: ${record.closingDate||'-'}`,45,80);let y=112;analysis.items.forEach(({card,analysis})=>{const block=105+analysis.quotes.length*line;ctx.fillStyle='#fff';ctx.fillRect(35,y,width-70,block);ctx.strokeStyle='#dce4ed';ctx.strokeRect(35,y,width-70,block);ctx.fillStyle='#eef4f8';ctx.fillRect(35,y,width-70,38);ctx.fillStyle='#102a43';ctx.font='bold 17px Segoe UI';ctx.fillText(`${card.name||'Item'}  |  Qty: ${card.qty||'-'}`,55,y+25);ctx.fillStyle='#627d98';ctx.font='bold 12px Segoe UI';['RANK','BIDDER','MODEL','UNIT PRICE','TOTAL PRICE'].forEach((text,index)=>ctx.fillText(text,[55,220,590,1000,1240][index],y+63));analysis.quotes.forEach((quote,index)=>{const row=y+91+index*line;if(index===0){ctx.fillStyle='#eaf8ef';ctx.fillRect(36,row-25,width-72,line)}ctx.fillStyle=index===0?'#16794f':'#243b53';ctx.font='15px Segoe UI';ctx.fillText(`L${index+1}`,[55][0],row);ctx.fillText(quote.name,220,row);ctx.fillText(quote.model,590,row);ctx.fillText(money.format(quote.unit),1000,row);ctx.fillText(money.format(quote.total),1240,row);});y+=block+15;});const link=document.createElement('a');link.download=`Tender-${(record.customerName||'Result').replaceAll(' ','-')}.png`;link.href=canvas.toDataURL('image/png');link.click();}
-
-// Image export controls: orientation and resolution are selected in the report toolbar.
-async function generateImage(record) {
-  const orientation = document.querySelector('#imageOrientation')?.value || 'portrait';
-  const quality = Number(document.querySelector('#imageSize')?.value || 2);
-  const W = orientation === 'landscape' ? 1600 : 900;
-  const H = orientation === 'landscape' ? 900 : 1600;
-  const scale = Math.max(1, Math.min(3, quality));
-  const margin = orientation === 'landscape' ? 44 : 36;
-  const analysis = tenderAnalysis(record);
-  const items = analysis.items.length ? analysis.items : [{card:{name:'No items',qty:'-'},analysis:{quotes:[]}}];
-  const pages = [];
-  const wrapText = (ctx, text, maxWidth) => {
-    const words = String(text ?? '-').split(/\s+/);
+function openImageOptions(record) {
+  const modal = document.querySelector('#imageOptionsModal');
+  modal.dataset.recordId = record.id;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+}
+function closeImageOptions() {
+  const modal = document.querySelector('#imageOptionsModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+}
+async function generateImage(record, options) {
+  const presets = {
+    phone: {orientation:'portrait', width:1080, title:'Phone Portrait'},
+    portrait: {orientation:'portrait', width:1600, title:'Portrait HD'},
+    landscape: {orientation:'landscape', width:1920, title:'Landscape HD'},
+    a4landscape: {orientation:'landscape', width:3508, title:'A4 Landscape'},
+    a4portrait: {orientation:'portrait', width:2480, title:'A4 Portrait'}
+  };
+  const preset = presets[options.size] || presets.landscape;
+  const orientation = preset.orientation;
+  const scale = Number(options.resolution || 1);
+  const W = preset.width;
+  const margin = orientation === 'landscape' ? 56 : 64;
+  const gap = 18;
+  const fontScale = W / (orientation === 'landscape' ? 1600 : 1080);
+  const fs = n => Math.max(13, Math.round(n * fontScale));
+  const lineH = n => Math.round(n * fontScale);
+  const measure = document.createElement('canvas').getContext('2d');
+  const wrap = (text, font, maxWidth) => {
+    measure.font = font;
+    const words = String(text == null ? '-' : text).split(/\s+/);
     const lines = [];
     let line = '';
-    words.forEach(word => {
+    for (const word of words) {
       const next = line ? line + ' ' + word : word;
-      if (line && ctx.measureText(next).width > maxWidth) { lines.push(line); line = word; }
+      if (line && measure.measureText(next).width > maxWidth) { lines.push(line); line = word; }
       else line = next;
-    });
+    }
     if (line) lines.push(line);
     return lines.length ? lines : ['-'];
   };
-  const fieldsFor = card => [
-    ['Quantity', card.qty], ['Category', card.category], ['Quoted Model', card.model],
-    ['Processor', card.processor], ['RAM', card.ram], ['Storage', card.storage],
-    ['Display / Monitor', card.display || card.monitor], ['Warranty', card.warranty],
-    ['Local Purchase 1', card.localPurchase1], ['Local Purchase 2', card.localPurchase2],
-    ['Local Purchase 3', card.localPurchase3]
-  ].filter(([label,value]) => value !== undefined && value !== null && String(value).trim() !== '');
-  items.forEach((item, itemIndex) => {
-    const card = item.card;
+  const analysis = tenderAnalysis(record);
+  const items = analysis.items.length ? analysis.items : [{card:{name:'No items',qty:'-'},analysis:{quotes:[]}}];
+  const pages = [];
+  const specFields = card => [
+    ['Quantity',card.qty],['Category',card.category],['Quoted model',card.model],
+    ['Processor',card.processor],['RAM',card.ram],['Storage',card.storage],
+    ['Display / monitor',card.display || card.monitor],['Warranty',card.warranty],
+    ['Local purchase 1',card.localPurchase1],['Local purchase 2',card.localPurchase2],['Local purchase 3',card.localPurchase3]
+  ].filter(pair => pair[1] !== undefined && pair[1] !== null && String(pair[1]).trim() !== '');
+  items.forEach((item,itemIndex) => {
     const quotes = item.analysis.quotes || [];
-    // Split quotes only when needed; the complete bidder list is preserved across pages.
-    const headerH = orientation === 'landscape' ? 190 : 220;
-    const specsH = orientation === 'landscape' ? 430 : 470;
-    const quoteH = orientation === 'landscape' ? 190 : 225;
-    const topY = headerH;
-    const firstAvailable = H - (topY + 78 + specsH + 45 + 80);
-    const nextAvailable = H - (topY + 78 + 60 + 45 + 80);
-    const firstCapacity = Math.max(1, Math.floor(firstAvailable / quoteH));
-    const nextCapacity = Math.max(1, Math.floor(nextAvailable / quoteH));
-    if (!quotes.length) pages.push({card,quotes:[],itemIndex,first:true});
-    else {
-      let offset = 0;
-      while (offset < quotes.length) {
-        const first = offset === 0;
-        const capacity = first ? firstCapacity : nextCapacity;
-        pages.push({card,quotes:quotes.slice(offset,offset+capacity),itemIndex,first});
-        offset += capacity;
-      }
+    const perPage = orientation === 'landscape' ? (W >= 3000 ? 10 : 7) : 5;
+    if (!quotes.length) pages.push({card:item.card,quotes:[],itemIndex,first:true,rankOffset:0});
+    else for (let offset=0; offset<quotes.length; offset+=perPage) {
+      pages.push({card:item.card,quotes:quotes.slice(offset,offset+perPage),itemIndex,first:offset===0,rankOffset:offset});
     }
   });
-  function drawPage(page, pageNo) {
-    const canvas = document.createElement('canvas');
-    canvas.width = W * scale; canvas.height = H * scale;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
-    ctx.fillStyle = '#f4f6fa'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,orientation === 'landscape' ? 140 : 165);
-    ctx.fillStyle = '#7b1d83'; ctx.fillRect(0,0,10,orientation === 'landscape' ? 140 : 165);
-    ctx.fillStyle = '#28232b'; ctx.font = 'bold ' + (orientation === 'landscape' ? 34 : 36) + 'px Arial';
-    ctx.fillText('Tender Result', margin, 48);
-    ctx.fillStyle = '#65146d'; ctx.font = 'bold ' + (orientation === 'landscape' ? 26 : 27) + 'px Arial';
-    const customerLines = wrapText(ctx, record.customerName || 'Customer', W - margin*2);
-    ctx.fillText(customerLines[0], margin, 86);
-    ctx.fillStyle = '#5e5661'; ctx.font = '20px Arial';
-    ctx.fillText('Account: ' + String(record.accountHolderName || '-'), margin, 120);
-    ctx.fillText('Closing Date: ' + String(record.closingDate || '-'), margin, 148);
-    let y = orientation === 'landscape' ? 165 : 190;
-    ctx.fillStyle = '#efe7f2'; ctx.fillRect(margin,y,W-margin*2,62);
-    ctx.fillStyle = '#65146d'; ctx.font = 'bold 23px Arial';
-    ctx.fillText('ITEM ' + (page.itemIndex+1) + ': ' + String(page.card.name || 'Item'), margin+18,y+27);
-    ctx.fillStyle = '#28232b'; ctx.font = '20px Arial';
-    ctx.fillText('Quantity: ' + String(page.card.qty || '-'), margin+18,y+52);
-    y += 78;
-    if (page.first) {
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(margin,y,W-margin*2,orientation === 'landscape' ? 410 : 450);
-      ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin,y,W-margin*2,orientation === 'landscape' ? 410 : 450);
-      ctx.fillStyle = '#28232b'; ctx.font = 'bold 23px Arial'; ctx.fillText('SPECIFICATIONS',margin+18,y+32);
-      const fields = fieldsFor(page.card);
-      const labelW = orientation === 'landscape' ? 190 : 190;
-      const valueW = W - margin*2 - labelW - 55;
-      let sy = y+65;
-      const lineH = orientation === 'landscape' ? 25 : 29;
-      fields.forEach(([label,value]) => {
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 17px Arial';
-        ctx.fillText(label,margin+18,sy);
-        ctx.fillStyle = '#28232b'; ctx.font = '18px Arial';
-        const lines = wrapText(ctx,value,valueW);
-        lines.forEach((line,index) => ctx.fillText(line,margin+labelW,sy+index*lineH));
-        sy += Math.max(lineH+3, lines.length*lineH+3);
-      });
-      y += (orientation === 'landscape' ? 430 : 470);
-    } else {
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(margin,y,W-margin*2,45);
-      ctx.fillStyle = '#5e5661'; ctx.font = '20px Arial';
-      ctx.fillText('Bidder prices continued',margin+18,y+29);
-      y += 60;
-    }
-    ctx.fillStyle = '#28232b'; ctx.font = 'bold 24px Arial'; ctx.fillText('BIDDER PRICE COMPARISON',margin,y+27);
-    y += 45;
-    const cardH = orientation === 'landscape' ? 190 : 225;
-    page.quotes.forEach((quote,index) => {
-      const isWinner = page.first && index === 0;
-      ctx.fillStyle = isWinner ? '#e6f6ec' : '#ffffff';
-      ctx.fillRect(margin,y,W-margin*2,cardH-10);
-      ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin,y,W-margin*2,cardH-10);
-      ctx.fillStyle = isWinner ? '#126b42' : '#65146d';
-      ctx.font = 'bold 23px Arial'; ctx.fillText('L' + (page.quotes.indexOf(quote) + 1 + pageRankOffset(page)),margin+16,y+30);
-      const innerX = margin+82;
-      const contentWidth = W - innerX - margin - 18;
-      ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial';
-      const nameLines = wrapText(ctx,quote.name || 'Unnamed bidder',contentWidth);
-      ctx.fillText(nameLines[0],innerX,y+30);
-      if (nameLines[1]) ctx.fillText(nameLines[1],innerX,y+52);
-      ctx.fillStyle = '#5e5661'; ctx.font = '16px Arial'; ctx.fillText('MODEL',margin+16,y+80);
-      ctx.fillStyle = '#28232b'; ctx.font = '18px Arial';
-      const modelLines = wrapText(ctx,quote.model || '-',contentWidth);
-      ctx.fillText(modelLines[0],innerX,y+80);
-      if (modelLines[1]) ctx.fillText(modelLines[1],innerX,y+101);
-      if (orientation === 'landscape') {
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+145);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+145);
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',W/2+60,y+145);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.total),W/2+210,y+145);
-      } else {
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+145);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+145);
-        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',margin+16,y+188);
-        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.total),innerX,y+188);
-      }
-      y += cardH;
+  function drawPage(page,pageNo) {
+    const isLandscape = orientation === 'landscape';
+    const baseFont = fs(isLandscape ? 24 : 25);
+    const smallFont = fs(isLandscape ? 17 : 19);
+    const titleFont = fs(isLandscape ? 34 : 39);
+    const contentW = W - margin*2;
+    const colRank = fs(58), colUnit = fs(isLandscape ? 220 : 230), colTotal = fs(isLandscape ? 250 : 250);
+    const colBidder = Math.round(contentW * (isLandscape ? .25 : .27));
+    const colModel = contentW - colRank - colUnit - colTotal - colBidder;
+    const specs = page.first ? specFields(page.card).map(pair => ({
+      label:pair[0], lines:wrap(pair[1], smallFont + 'px Arial', contentW - fs(250))
+    })) : [];
+    const quoteRows = page.quotes.map(quote => {
+      const nameLines = wrap(quote.name || 'Unnamed bidder', baseFont + 'px Arial', colBidder-fs(24));
+      const modelLines = wrap(quote.model || '-', smallFont + 'px Arial', colModel-fs(24));
+      return {quote,nameLines,modelLines,lines:Math.max(nameLines.length,modelLines.length,1)};
     });
-    ctx.fillStyle = '#746b76'; ctx.font = '16px Arial';
-    ctx.fillText('Page ' + pageNo + ' of ' + pages.length,margin,H-18);
+    const headerH = fs(160), itemH = fs(78);
+    const specRowH = fs(36);
+    const specH = page.first ? fs(65) + specs.reduce((sum,row)=>sum+Math.max(specRowH,row.lines*lineH(25)+fs(8)),0)+fs(25) : fs(45);
+    const tableHeadH = fs(58);
+    const rowHeights = quoteRows.map(row => Math.max(fs(78), row.lines*lineH(28)+fs(28)));
+    const footerH = fs(48);
+    const H = headerH + itemH + gap + specH + gap + tableHeadH + rowHeights.reduce((a,b)=>a+b,0) + footerH + margin;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(W*scale); canvas.height = Math.round(H*scale);
+    const ctx = canvas.getContext('2d'); ctx.scale(scale,scale);
+    ctx.fillStyle='#f3f5f9';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,headerH);
+    ctx.fillStyle='#7b1d83';ctx.fillRect(0,0,fs(10),headerH);
+    ctx.fillStyle='#29242b';ctx.font='bold '+titleFont+'px Arial';ctx.fillText('TENDER RESULT',margin,fs(49));
+    ctx.fillStyle='#65146d';ctx.font='bold '+fs(isLandscape?25:28)+'px Arial';
+    const customerLines=wrap(record.customerName||'Customer',ctx.font,contentW);
+    ctx.fillText(customerLines[0],margin,fs(88));
+    ctx.fillStyle='#625a66';ctx.font=smallFont+'px Arial';
+    ctx.fillText('Account holder: '+String(record.accountHolderName||'-'),margin,fs(119));
+    ctx.fillText('Closing date: '+String(record.closingDate||'-'),margin,fs(146));
+    let y=headerH+fs(18);
+    ctx.fillStyle='#eee7f2';ctx.fillRect(margin,y,contentW,itemH-fs(4));
+    ctx.fillStyle='#65146d';ctx.font='bold '+baseFont+'px Arial';
+    const itemNameLines=wrap(page.card.name||'Item',ctx.font,contentW-fs(260));
+    ctx.fillText('ITEM '+(page.itemIndex+1)+': '+itemNameLines[0],margin+fs(18),y+fs(32));
+    ctx.fillStyle='#29242b';ctx.font=smallFont+'px Arial';
+    ctx.fillText('Quantity: '+String(page.card.qty||'-'),margin+fs(18),y+fs(61));
+    y+=itemH+gap;
+    if(page.first){
+      ctx.fillStyle='#fff';ctx.fillRect(margin,y,contentW,specH);ctx.strokeStyle='#dce2e9';ctx.strokeRect(margin,y,contentW,specH);
+      ctx.fillStyle='#29242b';ctx.font='bold '+baseFont+'px Arial';ctx.fillText('SPECIFICATIONS',margin+fs(18),y+fs(36));
+      let sy=y+fs(62);
+      specs.forEach(row=>{
+        ctx.fillStyle='#625a66';ctx.font='bold '+smallFont+'px Arial';ctx.fillText(row.label,margin+fs(18),sy);
+        ctx.fillStyle='#29242b';ctx.font=smallFont+'px Arial';
+        row.lines.forEach((line,index)=>ctx.fillText(line,margin+fs(250),sy+index*lineH(25)));
+        sy+=Math.max(specRowH,row.lines.length*lineH(25)+fs(8));
+      });
+    } else {
+      ctx.fillStyle='#fff';ctx.fillRect(margin,y,contentW,specH);ctx.strokeStyle='#dce2e9';ctx.strokeRect(margin,y,contentW,specH);
+      ctx.fillStyle='#625a66';ctx.font=baseFont+'px Arial';ctx.fillText('Bidder list continued — specifications are on page 1 for this item.',margin+fs(18),y+fs(30));
+    }
+    y+=specH+gap;
+    ctx.fillStyle='#65146d';ctx.fillRect(margin,y,contentW,tableHeadH);
+    ctx.fillStyle='#fff';ctx.font='bold '+smallFont+'px Arial';
+    let x=margin+fs(14);
+    ctx.fillText('RANK',x,y+tableHeadH/2+smallFont/3);x+=colRank;
+    ctx.fillText('BIDDER',x,y+tableHeadH/2+smallFont/3);x+=colBidder;
+    ctx.fillText('MODEL',x,y+tableHeadH/2+smallFont/3);x+=colModel;
+    ctx.fillText('UNIT PRICE',x,y+tableHeadH/2+smallFont/3);x+=colUnit;
+    ctx.fillText('TOTAL PRICE',x,y+tableHeadH/2+smallFont/3);
+    y+=tableHeadH;
+    quoteRows.forEach((row,index)=>{
+      const rh=rowHeights[index];
+      ctx.fillStyle=(page.rankOffset+index===0)?'#e4f5eb':(index%2?'#fff':'#f9fafc');
+      ctx.fillRect(margin,y,contentW,rh);ctx.strokeStyle='#dce2e9';ctx.strokeRect(margin,y,contentW,rh);
+      ctx.fillStyle=(page.rankOffset+index===0)?'#126b42':'#29242b';
+      ctx.font='bold '+baseFont+'px Arial';
+      let cx=margin+fs(14);
+      ctx.fillText('L'+(page.rankOffset+index+1),cx,y+rh/2+baseFont/3);cx+=colRank;
+      ctx.font=baseFont+'px Arial';
+      row.nameLines.forEach((line,index2)=>ctx.fillText(line,cx,y+fs(25)+index2*lineH(28)));cx+=colBidder;
+      ctx.font=smallFont+'px Arial';
+      row.modelLines.forEach((line,index2)=>ctx.fillText(line,cx,y+fs(25)+index2*lineH(28)));cx+=colModel;
+      ctx.font=smallFont+'px Arial';ctx.fillText(money.format(row.quote.unit),cx,y+rh/2+smallFont/3);cx+=colUnit;
+      ctx.fillText(money.format(row.quote.total),cx,y+rh/2+smallFont/3);
+      y+=rh;
+    });
+    ctx.fillStyle='#746b76';ctx.font=smallFont+'px Arial';
+    ctx.fillText('Page '+pageNo+' of '+pages.length+' | '+preset.title+' | '+Math.round(W*scale)+' x '+Math.round(H*scale)+' px',margin,H-fs(15));
     return canvas;
   }
-  // Keep L1 ranks correct across pages for each item.
-  function pageRankOffset(page) {
-    let offset = 0;
-    for (let i=0;i<pages.length;i++) {
-      if (pages[i] === page) break;
-      if (pages[i].itemIndex === page.itemIndex) offset += pages[i].quotes.length;
-    }
-    return offset;
+  for(let i=0;i<pages.length;i++){
+    const canvas=drawPage(pages[i],i+1);
+    const link=document.createElement('a');
+    link.download='Tender-'+String(record.customerName||'Result').replace(/[^a-z0-9]+/gi,'-')+'-'+options.size+'-'+scale+'x-Page-'+(i+1)+'.png';
+    link.href=canvas.toDataURL('image/png');link.click();
+    await new Promise(resolve=>setTimeout(resolve,350));
   }
-  for (let i=0;i<pages.length;i++) {
-    const canvas = drawPage(pages[i],i+1);
-    const link = document.createElement('a');
-    link.download = 'Tender-' + String(record.customerName || 'Result').replace(/[^a-z0-9]+/gi,'-') + '-' + orientation + '-' + i18nSize(scale) + '-Page-' + (i+1) + '.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    await new Promise(resolve => setTimeout(resolve,300));
-  }
-  function i18nSize(value) { return value === 1 ? 'standard' : value === 1.5 ? 'high' : 'ultra'; }
 }
 
 function renderVisualAnalytics(shown) {
@@ -228,10 +225,10 @@ function draw() {
   const categories={};shown.flatMap(record=>record.cards||[]).forEach(card=>{if(card.category)categories[card.category]=(categories[card.category]||0)+1});const max=Math.max(...Object.values(categories),1);document.querySelector('#categoryChart').innerHTML=Object.entries(categories).sort((a,b)=>b[1]-a[1]).map(([name,count])=>`<div><span>${name}</span><i><b style="width:${count/max*100}%"></b></i><strong>${count}</strong></div>`).join('')||'No category data.';
   renderVisualAnalytics(shown);
   document.querySelector('#count').textContent=`${shown.length} tender record${shown.length===1?'':'s'}`;
-  const body=document.querySelector('#records');body.innerHTML='';if(!shown.length){body.innerHTML='<tr><td colspan="8" class="table-empty">No tender records match these filters.</td></tr>';return;}shown.forEach(record=>{const analysis=tenderAnalysis(record),row=document.createElement('tr');row.className='record-row';row.innerHTML=`<td><strong>${record.customerName||'-'}</strong></td><td>${record.accountHolderName||'-'}</td><td>${record.closingDate||'-'}</td><td>${(record.cards||[]).length}</td><td>${analysis.winner}</td><td class="${analysis.gap>0?'gap-positive':''}">${analysis.gap===null?'-':money.format(analysis.gap)}</td><td>${record.updatedAt?new Date(record.updatedAt).toLocaleString():'-'}</td><td class="row-actions"><button class="button small image">IMG</button><button class="button small edit">Edit</button><button class="button small delete">Delete</button></td>`;row.onclick=()=>{const next=row.nextElementSibling;if(next?.classList.contains('detail-row'))next.remove();else row.insertAdjacentHTML('afterend',details(record));};row.querySelector('.image').onclick=event=>{event.stopPropagation();generateImage(record);};row.querySelector('.edit').onclick=event=>{event.stopPropagation();editTender(record);};row.querySelector('.delete').onclick=event=>{event.stopPropagation();deleteTender(record);};body.append(row);});
+  const body=document.querySelector('#records');body.innerHTML='';if(!shown.length){body.innerHTML='<tr><td colspan="8" class="table-empty">No tender records match these filters.</td></tr>';return;}shown.forEach(record=>{const analysis=tenderAnalysis(record),row=document.createElement('tr');row.className='record-row';row.innerHTML=`<td><strong>${record.customerName||'-'}</strong></td><td>${record.accountHolderName||'-'}</td><td>${record.closingDate||'-'}</td><td>${(record.cards||[]).length}</td><td>${analysis.winner}</td><td class="${analysis.gap>0?'gap-positive':''}">${analysis.gap===null?'-':money.format(analysis.gap)}</td><td>${record.updatedAt?new Date(record.updatedAt).toLocaleString():'-'}</td><td class="row-actions"><button class="button small image">IMG</button><button class="button small edit">Edit</button><button class="button small delete">Delete</button></td>`;row.onclick=()=>{const next=row.nextElementSibling;if(next?.classList.contains('detail-row'))next.remove();else row.insertAdjacentHTML('afterend',details(record));};row.querySelector('.image').onclick=event=>{event.stopPropagation();openImageOptions(record);};row.querySelector('.edit').onclick=event=>{event.stopPropagation();editTender(record);};row.querySelector('.delete').onclick=event=>{event.stopPropagation();deleteTender(record);};body.append(row);});
 }
 
 function exportCsv() { const rows=[['Customer','Account Holder','Closing Date','Item','Category','Bidder','Model','Unit Price','Total Price']];filteredRecords().forEach(record=>(record.cards||[]).forEach(card=>cardAnalysis(card).quotes.forEach(quote=>rows.push([record.customerName||'',record.accountHolderName||'',record.closingDate||'',card.name||'',card.category||'',quote.name,quote.model,quote.unit,quote.total]))));const text=rows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(',')).join('\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));link.download='tender-report.csv';link.click();URL.revokeObjectURL(link.href);}
 
 async function load() { try { const source = window.__FIREBASE_TENDERS__ || await fetch(`${firebaseUrl}/tenders.json`).then(response => { if (!response.ok) throw new Error('Firebase unavailable'); return response.json(); }); records=Object.entries(source||{}).map(([id,record])=>({id,...record})).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));buildFilters();draw(); } catch { document.querySelector('#records').innerHTML='<tr><td colspan="8" class="table-empty">Could not load Firebase tender records. Check internet connection and Firebase rules.</td></tr>'; } }
-['search','category','model','processor','ram','storage','display','warranty','from','to','sort'].forEach(id=>document.querySelector(`#${id}`).addEventListener(id==='search'?'input':'change',draw));document.querySelector('#reload').onclick=()=>location.reload();document.querySelector('#clear').onclick=()=>{document.querySelector('#search').value='';['category','model','processor','ram','storage','display','warranty'].forEach(id=>document.querySelector(`#${id}`).value='all');document.querySelector('#from').value='';document.querySelector('#to').value='';document.querySelector('#sort').value='updated';draw();};document.querySelector('#exportCsv').onclick=exportCsv;load();
+['search','category','model','processor','ram','storage','display','warranty','from','to','sort'].forEach(id=>document.querySelector(`#${id}`).addEventListener(id==='search'?'input':'change',draw));document.querySelector('#reload').onclick=()=>location.reload();document.querySelector('#clear').onclick=()=>{document.querySelector('#search').value='';['category','model','processor','ram','storage','display','warranty'].forEach(id=>document.querySelector(`#${id}`).value='all');document.querySelector('#from').value='';document.querySelector('#to').value='';document.querySelector('#sort').value='updated';draw();};document.querySelector('#exportCsv').onclick=exportCsv;document.querySelector('#imageOptionsCancel').onclick=closeImageOptions;document.querySelector('#imageOptionsModal').addEventListener('click',event=>{if(event.target.id==='imageOptionsModal')closeImageOptions();});document.querySelector('#imageOptionsForm').addEventListener('submit',async event=>{event.preventDefault();const id=document.querySelector('#imageOptionsModal').dataset.recordId;const record=records.find(item=>String(item.id)===String(id));if(!record)return;const options={size:document.querySelector('#imagePreset').value,resolution:document.querySelector('#imageResolution').value};closeImageOptions();await generateImage(record,options);});load();
