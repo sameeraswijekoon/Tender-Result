@@ -67,7 +67,7 @@ async function generateImage(record) {
   const fontSmall = '22px Arial';
   const rowPad = 18;
   const prepared = [];
-  let totalHeight = 250 + 30;
+  let totalHeight = 180 + 30;
   const items = tenderAnalysis(record).items;
   items.forEach((item, itemIndex) => {
     const card = item.card;
@@ -101,15 +101,13 @@ async function generateImage(record) {
   const ctx = canvas.getContext('2d');
   ctx.scale(scale, scale);
   ctx.fillStyle = '#f3f5f9'; ctx.fillRect(0, 0, W, totalHeight);
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, 185);
-  ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 10, 185);
-  ctx.fillStyle = '#29242b'; ctx.font = fontTitle; ctx.fillText('TENDER RESULT', margin, 48);
-  ctx.fillStyle = '#65146d'; ctx.font = 'bold 28px Arial';
-  ctx.fillText(wrap(record.customerName || 'Customer', 'bold 28px Arial', contentW)[0], margin, 82);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, 125);
+  ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 10, 125);
+  ctx.fillStyle = '#29242b'; ctx.font = 'bold 25px Arial';
+  ctx.fillText('TENDER RESULT - ' + String(record.customerName || 'Customer') + ' | Account holder: ' + String(record.accountHolderName || '-'), margin, 55);
   ctx.fillStyle = '#625a66'; ctx.font = fontSmall;
-  ctx.fillText('Account holder: ' + String(record.accountHolderName || '-'), margin, 116);
-  ctx.fillText('Closing date: ' + String(record.closingDate || '-'), margin, 150);
-  let y = 205;
+  ctx.fillText('Closing date: ' + String(record.closingDate || '-'), margin, 95);
+  let y = 145;
   prepared.forEach(section => {
     const card = section.card;
     ctx.fillStyle = '#eee7f2'; ctx.fillRect(margin, y, contentW, 76);
