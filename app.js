@@ -3,6 +3,7 @@ const itemTemplate = document.querySelector('#itemTemplate');
 const bidderTemplate = document.querySelector('#bidderTemplate');
 const fmt = new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR', maximumFractionDigits: 2 });
 const num = value => Number(value) || 0;
+function normalizeSearch(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 const storageKey = 'abansTenderDraft';
 const firebaseUrl = 'https://tender-reading-management-default-rtdb.firebaseio.com';
 let cloudTenderId = localStorage.getItem('abansCloudTenderId') || '';
@@ -41,6 +42,20 @@ function saveData() {
       storage: card.querySelector('.storage').value, display: card.querySelector('.display').value,
       warranty: card.querySelector('.warranty').value,
       localPurchase1: card.querySelector('.local-purchase-1').value, localPurchase2: card.querySelector('.local-purchase-2').value, localPurchase3: card.querySelector('.local-purchase-3').value,
+      ramNormalized: normalizeSearch(card.querySelector('.ram').value),
+      processorNormalized: normalizeSearch(card.querySelector('.processor').value),
+      storageNormalized: normalizeSearch(card.querySelector('.storage').value),
+      displayNormalized: normalizeSearch(card.querySelector('.display').value),
+      warrantyNormalized: normalizeSearch(card.querySelector('.warranty').value),
+      searchTextNormalized: normalizeSearch([
+        card.querySelector('.item-name').value, card.querySelector('.category').value,
+        card.querySelector('.model').value, card.querySelector('.processor').value,
+        card.querySelector('.ram').value, card.querySelector('.storage').value,
+        card.querySelector('.display').value, card.querySelector('.warranty').value,
+        card.querySelector('.local-purchase-1').value, card.querySelector('.local-purchase-2').value,
+        card.querySelector('.local-purchase-3').value,
+        ...[...card.querySelectorAll('.bidder-row')].flatMap(row => [row.querySelector('.bidder-name').value, row.querySelector('.bidder-model').value])
+      ].join(' ')),
       abansUnit: card.querySelector('.abans-unit').value,
       abansTotal: card.querySelector('.abans-total').value,
       bidders: [...card.querySelectorAll('.bidder-row')].map(row => ({ name: row.querySelector('.bidder-name').value, model: row.querySelector('.bidder-model').value, unit: row.querySelector('.bidder-unit').value, total: row.querySelector('.bidder-total').value }))
@@ -223,8 +238,6 @@ function analyseTender(tender) {
   return { comparisons, winner: winner ? `${winner[0]} (${winner[1]} L1)` : '-', avgGap: gaps.length ? gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length : null, abansL1: comparisons.filter(result => result.lowest.name === 'Abans Computer').length };
 }
 
-function normalizeSearch(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
-
 function renderDashboard() {
   const records = document.querySelector('#cloudRecords');
   const summary = document.querySelector('#reportSummary');
@@ -233,7 +246,7 @@ function renderDashboard() {
   const from = document.querySelector('#reportFrom').value;
   const to = document.querySelector('#reportTo').value;
   const tenders = allCloudTenders.filter(tender => {
-    const haystack = normalizeSearch(`${tender.customerName || ''} ${tender.accountHolderName || ''} ${(tender.cards || []).map(card => [card.name, card.category, card.model, card.processor, card.ram, card.storage, card.display, card.warranty, card.localPurchase1, card.localPurchase2, card.localPurchase3, ...(card.bidders || []).flatMap(bidder => [bidder.name, bidder.model])].join(' ')).join(' ')}`);
+    const haystack = normalizeSearch(`${tender.customerName || ''} ${tender.accountHolderName || ''} ${(tender.cards || []).map(card => card.searchTextNormalized || [card.name, card.category, card.model, card.processor, card.ram, card.storage, card.display, card.warranty, card.localPurchase1, card.localPurchase2, card.localPurchase3, ...(card.bidders || []).flatMap(bidder => [bidder.name, bidder.model])].join(' ')).join(' ')}`);
     const date = String(tender.updatedAt || '').slice(0, 10);
     return (!term || haystack.includes(term)) && (status === 'all' || tender.status === status) && (!from || date >= from) && (!to || date <= to);
   });
