@@ -50,19 +50,22 @@ function generateImage(record) { const analysis=tenderAnalysis(record), width=15
 function generateImage(record) {
   const analysis = tenderAnalysis(record), width = 1600, quoteLine = 38;
   const blockHeights = analysis.items.map(item => 180 + item.analysis.quotes.length * quoteLine);
-  const height = 155 + blockHeights.reduce((sum, block) => sum + block + 18, 0);
+  const height = 175 + blockHeights.reduce((sum, block) => sum + block + 18, 0);
   const canvas = document.createElement('canvas'); canvas.width = width * 2; canvas.height = height * 2;
   const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  ctx.fillStyle = '#f8f7f9'; ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, width, 92);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 23px Segoe UI'; ctx.fillText('COMPUTER CORPORATE SALES DIVISION - ABANS PLC  |  TENDER READING RESULT', 45, 43);
-  ctx.font = '16px Segoe UI'; ctx.fillText(`Customer: ${record.customerName || '-'}     Account Holder: ${record.accountHolderName || '-'}     Closing Date: ${record.closingDate || '-'}`, 45, 72);
-  let y = 115;
+  ctx.fillStyle = '#f7f8fa'; ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, 112);
+  ctx.fillStyle = '#7b1d83'; ctx.fillRect(0, 0, 8, 112);
+  ctx.fillStyle = '#29242b'; ctx.font = 'bold 26px Segoe UI'; ctx.fillText('Tender Price Comparison', 42, 42);
+  ctx.fillStyle = '#7b1d83'; ctx.font = 'bold 19px Segoe UI'; ctx.fillText(record.customerName || 'Tender Record', 42, 72);
+  ctx.fillStyle = '#766d78'; ctx.font = '14px Segoe UI';
+  ctx.fillText(`Account Holder: ${record.accountHolderName || '-'}     |     Closing Date: ${record.closingDate || '-'}`, 42, 96);
+  let y = 132;
   analysis.items.forEach(({ card, analysis: itemAnalysis }, itemIndex) => {
     const block = blockHeights[itemIndex];
     ctx.fillStyle = '#fff'; ctx.fillRect(35, y, width - 70, block);
-    ctx.strokeStyle = '#e8e2e9'; ctx.strokeRect(35, y, width - 70, block);
-    ctx.fillStyle = '#f5eafa'; ctx.fillRect(35, y, width - 70, 38);
+    ctx.strokeStyle = '#e3e5e8'; ctx.strokeRect(35, y, width - 70, block);
+    ctx.fillStyle = '#f4edf6'; ctx.fillRect(35, y, width - 70, 38);
     ctx.fillStyle = '#65146d'; ctx.font = 'bold 18px Segoe UI';
     ctx.fillText(`${card.name || `Item ${itemIndex + 1}`}  |  Qty: ${card.qty || '-'}`, 55, y + 26);
     const specs = [
@@ -90,7 +93,6 @@ function generateImage(record) {
   });
   const link = document.createElement('a'); link.download = `Tender-${(record.customerName || 'Result').replaceAll(' ', '-')}.png`; link.href = canvas.toDataURL('image/png'); link.click();
 }
-
 function renderVisualAnalytics(shown) {
   let host = document.querySelector('#visualAnalytics');
   if (!host) { host = document.createElement('section'); host.id = 'visualAnalytics'; host.className = 'visual-analytics'; document.querySelector('#categoryChart').insertAdjacentElement('afterend', host); }
