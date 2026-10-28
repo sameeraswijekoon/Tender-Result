@@ -46,104 +46,162 @@ function editTender(record) { localStorage.setItem('abansTenderDraft', JSON.stri
 async function deleteTender(record) { if (!confirm(`Delete tender for ${record.customerName || 'this customer'}? This cannot be undone.`)) return; try { const response = await fetch(`https://tender-reading-management-default-rtdb.firebaseio.com/tenders/${record.id}.json`, { method: 'DELETE' }); if (!response.ok) throw new Error(); records = records.filter(item => item.id !== record.id); draw(); alert('Tender deleted from Firebase.'); } catch { alert('Could not delete from Firebase. Check your database connection and rules.'); } }
 function generateImage(record) { const analysis=tenderAnalysis(record), width=1500, line=42, height=180+analysis.items.reduce((sum,item)=>sum+105+item.analysis.quotes.length*line,0), canvas=document.createElement('canvas');canvas.width=width*2;canvas.height=height*2;const ctx=canvas.getContext('2d');ctx.scale(2,2);ctx.fillStyle='#f5f8fc';ctx.fillRect(0,0,width,height);ctx.fillStyle='#102a43';ctx.font='bold 26px Segoe UI';ctx.fillText(record.customerName||'Tender Result',45,48);ctx.font='17px Segoe UI';ctx.fillStyle='#486581';ctx.fillText(`Account Holder: ${record.accountHolderName||'-'}     Closing Date: ${record.closingDate||'-'}`,45,80);let y=112;analysis.items.forEach(({card,analysis})=>{const block=105+analysis.quotes.length*line;ctx.fillStyle='#fff';ctx.fillRect(35,y,width-70,block);ctx.strokeStyle='#dce4ed';ctx.strokeRect(35,y,width-70,block);ctx.fillStyle='#eef4f8';ctx.fillRect(35,y,width-70,38);ctx.fillStyle='#102a43';ctx.font='bold 17px Segoe UI';ctx.fillText(`${card.name||'Item'}  |  Qty: ${card.qty||'-'}`,55,y+25);ctx.fillStyle='#627d98';ctx.font='bold 12px Segoe UI';['RANK','BIDDER','MODEL','UNIT PRICE','TOTAL PRICE'].forEach((text,index)=>ctx.fillText(text,[55,220,590,1000,1240][index],y+63));analysis.quotes.forEach((quote,index)=>{const row=y+91+index*line;if(index===0){ctx.fillStyle='#eaf8ef';ctx.fillRect(36,row-25,width-72,line)}ctx.fillStyle=index===0?'#16794f':'#243b53';ctx.font='15px Segoe UI';ctx.fillText(`L${index+1}`,[55][0],row);ctx.fillText(quote.name,220,row);ctx.fillText(quote.model,590,row);ctx.fillText(money.format(quote.unit),1000,row);ctx.fillText(money.format(quote.total),1240,row);});y+=block+15;});const link=document.createElement('a');link.download=`Tender-${(record.customerName||'Result').replaceAll(' ','-')}.png`;link.href=canvas.toDataURL('image/png');link.click();}
 
-// Mobile-first export: create separate 9:20 pages so text stays readable on phones.
+// Image export controls: orientation and resolution are selected in the report toolbar.
 async function generateImage(record) {
+  const orientation = document.querySelector('#imageOrientation')?.value || 'portrait';
+  const quality = Number(document.querySelector('#imageSize')?.value || 2);
+  const W = orientation === 'landscape' ? 1600 : 900;
+  const H = orientation === 'landscape' ? 900 : 1600;
+  const scale = Math.max(1, Math.min(3, quality));
+  const margin = orientation === 'landscape' ? 44 : 36;
   const analysis = tenderAnalysis(record);
-  const W = 450, H = 1000, scale = 2, pad = 22;
-  const pages = [];
   const items = analysis.items.length ? analysis.items : [{card:{name:'No items',qty:'-'},analysis:{quotes:[]}}];
-  items.forEach(({card, analysis:itemAnalysis}, itemIndex) => {
-    const quotes = itemAnalysis.quotes || [];
-    const groups = [];
-    if (!quotes.length) groups.push([]);
-    else for (let i=0; i<quotes.length; i+=3) groups.push(quotes.slice(i,i+3));
-    groups.forEach((quotePage, pageIndex) => pages.push({card, quotes:quotePage, itemIndex, pageIndex, pageCount:groups.length}));
+  const pages = [];
+  const wrapText = (ctx, text, maxWidth) => {
+    const words = String(text ?? '-').split(/\s+/);
+    const lines = [];
+    let line = '';
+    words.forEach(word => {
+      const next = line ? line + ' ' + word : word;
+      if (line && ctx.measureText(next).width > maxWidth) { lines.push(line); line = word; }
+      else line = next;
+    });
+    if (line) lines.push(line);
+    return lines.length ? lines : ['-'];
+  };
+  const fieldsFor = card => [
+    ['Quantity', card.qty], ['Category', card.category], ['Quoted Model', card.model],
+    ['Processor', card.processor], ['RAM', card.ram], ['Storage', card.storage],
+    ['Display / Monitor', card.display || card.monitor], ['Warranty', card.warranty],
+    ['Local Purchase 1', card.localPurchase1], ['Local Purchase 2', card.localPurchase2],
+    ['Local Purchase 3', card.localPurchase3]
+  ].filter(([label,value]) => value !== undefined && value !== null && String(value).trim() !== '');
+  items.forEach((item, itemIndex) => {
+    const card = item.card;
+    const quotes = item.analysis.quotes || [];
+    // Split quotes only when needed; the complete bidder list is preserved across pages.
+    const headerH = orientation === 'landscape' ? 190 : 220;
+    const specsH = orientation === 'landscape' ? 285 : 390;
+    const quoteH = orientation === 'landscape' ? 150 : 185;
+    const topY = headerH + (itemIndex === 0 ? 0 : 0);
+    const firstAvailable = H - topY - specsH - 100;
+    const nextAvailable = H - topY - 100;
+    const firstCapacity = Math.max(1, Math.floor(firstAvailable / quoteH));
+    const nextCapacity = Math.max(1, Math.floor(nextAvailable / quoteH));
+    if (!quotes.length) pages.push({card,quotes:[],itemIndex,first:true});
+    else {
+      let offset = 0;
+      while (offset < quotes.length) {
+        const first = offset === 0;
+        const capacity = first ? firstCapacity : nextCapacity;
+        pages.push({card,quotes:quotes.slice(offset,offset+capacity),itemIndex,first});
+        offset += capacity;
+      }
+    }
   });
-  function drawPage(page, pageNumber) {
+  function drawPage(page, pageNo) {
     const canvas = document.createElement('canvas');
     canvas.width = W * scale; canvas.height = H * scale;
-    const ctx = canvas.getContext('2d'); ctx.scale(scale, scale);
-    ctx.fillStyle = '#f5f7fb'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,138);
-    ctx.fillStyle = '#7b1d83'; ctx.fillRect(0,0,7,138);
-    ctx.fillStyle = '#29242b'; ctx.font = 'bold 24px Arial'; ctx.fillText('Tender Result',pad,34);
-    ctx.fillStyle = '#65146d'; ctx.font = 'bold 19px Arial';
-    ctx.fillText(String(record.customerName || 'Customer').slice(0,34),pad,62);
-    ctx.fillStyle = '#625a66'; ctx.font = '13px Arial';
-    ctx.fillText('Account: ' + String(record.accountHolderName || '-').slice(0,36),pad,88);
-    ctx.fillText('Closing: ' + String(record.closingDate || '-'),pad,110);
-    ctx.fillStyle = '#f1eaf4'; ctx.fillRect(16,150,W-32,55);
-    ctx.fillStyle = '#65146d'; ctx.font = 'bold 17px Arial';
-    ctx.fillText('ITEM ' + (page.itemIndex+1) + (page.pageCount>1 ? '  •  PRICES ' + (page.pageIndex+1) + '/' + page.pageCount : ''),26,173);
-    ctx.fillStyle = '#29242b'; ctx.font = 'bold 16px Arial';
-    const itemName = String(page.card.name || 'Item').slice(0,45);
-    ctx.fillText(itemName,26,195);
-    let y = 226;
-    if (page.pageIndex === 0) {
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(16,y,W-32,285);
-      ctx.strokeStyle = '#dfe4ea'; ctx.strokeRect(16,y,W-32,285);
-      ctx.fillStyle = '#29242b'; ctx.font = 'bold 17px Arial'; ctx.fillText('SPECIFICATIONS',26,y+27);
-      const fields = [
-        ['Quantity',page.card.qty],['Category',page.card.category],['Model',page.card.model],
-        ['Processor',page.card.processor],['RAM',page.card.ram],['Storage',page.card.storage],
-        ['Display',page.card.display || page.card.monitor],['Warranty',page.card.warranty]
-      ].filter(([,v])=>v!==undefined && v!==null && String(v).trim()!=='');
-      let sy=y+53;
-      fields.forEach(([label,value])=>{
-        ctx.fillStyle='#625a66';ctx.font='bold 12px Arial';ctx.fillText(label,27,sy);
-        ctx.fillStyle='#29242b';ctx.font='14px Arial';
-        const text=String(value);
-        const maxChars=43;
-        const lines=[];
-        for(let i=0;i<text.length;i+=maxChars) lines.push(text.slice(i,i+maxChars));
-        lines.slice(0,2).forEach((line,i)=>ctx.fillText(line,126,sy+i*16));
-        sy += Math.max(23, Math.min(lines.length,2)*16+7);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#f4f6fa'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,orientation === 'landscape' ? 140 : 165);
+    ctx.fillStyle = '#7b1d83'; ctx.fillRect(0,0,10,orientation === 'landscape' ? 140 : 165);
+    ctx.fillStyle = '#28232b'; ctx.font = 'bold ' + (orientation === 'landscape' ? 34 : 36) + 'px Arial';
+    ctx.fillText('Tender Result', margin, 48);
+    ctx.fillStyle = '#65146d'; ctx.font = 'bold ' + (orientation === 'landscape' ? 26 : 27) + 'px Arial';
+    const customerLines = wrapText(ctx, record.customerName || 'Customer', W - margin*2);
+    ctx.fillText(customerLines[0], margin, 86);
+    ctx.fillStyle = '#5e5661'; ctx.font = '20px Arial';
+    ctx.fillText('Account: ' + String(record.accountHolderName || '-'), margin, 120);
+    ctx.fillText('Closing Date: ' + String(record.closingDate || '-'), margin, 148);
+    let y = orientation === 'landscape' ? 165 : 190;
+    ctx.fillStyle = '#efe7f2'; ctx.fillRect(margin,y,W-margin*2,62);
+    ctx.fillStyle = '#65146d'; ctx.font = 'bold 23px Arial';
+    ctx.fillText('ITEM ' + (page.itemIndex+1) + ': ' + String(page.card.name || 'Item'), margin+18,y+27);
+    ctx.fillStyle = '#28232b'; ctx.font = '20px Arial';
+    ctx.fillText('Quantity: ' + String(page.card.qty || '-'), margin+18,y+52);
+    y += 78;
+    if (page.first) {
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(margin,y,W-margin*2,orientation === 'landscape' ? 205 : 330);
+      ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin,y,W-margin*2,orientation === 'landscape' ? 205 : 330);
+      ctx.fillStyle = '#28232b'; ctx.font = 'bold 23px Arial'; ctx.fillText('SPECIFICATIONS',margin+18,y+32);
+      const fields = fieldsFor(page.card);
+      const labelW = orientation === 'landscape' ? 190 : 190;
+      const valueW = W - margin*2 - labelW - 55;
+      let sy = y+65;
+      const lineH = orientation === 'landscape' ? 25 : 29;
+      fields.forEach(([label,value]) => {
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 17px Arial';
+        ctx.fillText(label,margin+18,sy);
+        ctx.fillStyle = '#28232b'; ctx.font = '18px Arial';
+        const lines = wrapText(ctx,value,valueW);
+        lines.forEach((line,index) => ctx.fillText(line,margin+labelW,sy+index*lineH));
+        sy += Math.max(lineH+3, lines.length*lineH+3);
       });
-      y += 301;
+      y += (orientation === 'landscape' ? 225 : 350);
     } else {
-      ctx.fillStyle='#ffffff';ctx.fillRect(16,y,W-32,54);
-      ctx.fillStyle='#625a66';ctx.font='14px Arial';ctx.fillText('Bidder price comparison (continued)',26,y+30);
-      y += 68;
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(margin,y,W-margin*2,45);
+      ctx.fillStyle = '#5e5661'; ctx.font = '20px Arial';
+      ctx.fillText('Bidder prices continued',margin+18,y+29);
+      y += 60;
     }
-    ctx.fillStyle='#29242b';ctx.font='bold 17px Arial';ctx.fillText('BIDDER PRICES',pad,y+19);
-    y += 32;
-    page.quotes.forEach((quote, i) => {
-      const cardH = 185;
-      ctx.fillStyle = i===0 && page.pageIndex===0 ? '#e6f6ec' : '#ffffff';
-      ctx.fillRect(16,y,W-32,cardH-8);
-      ctx.strokeStyle='#dfe4ea';ctx.strokeRect(16,y,W-32,cardH-8);
-      ctx.fillStyle=i===0 && page.pageIndex===0 ? '#126b42' : '#65146d';
-      ctx.font='bold 18px Arial';ctx.fillText('L' + (page.pageIndex*3+i+1),26,y+27);
-      ctx.fillStyle='#29242b';ctx.font='bold 16px Arial';
-      ctx.fillText(String(quote.name || 'Unnamed bidder').slice(0,39),70,y+27);
-      ctx.fillStyle='#625a66';ctx.font='bold 12px Arial';ctx.fillText('MODEL',26,y+55);
-      ctx.fillStyle='#29242b';ctx.font='14px Arial';
-      const model=String(quote.model || '-');
-      ctx.fillText(model.slice(0,44),88,y+55);
-      if(model.length>44) ctx.fillText(model.slice(44,88),88,y+73);
-      ctx.fillStyle='#625a66';ctx.font='bold 12px Arial';ctx.fillText('UNIT PRICE',26,y+103);
-      ctx.fillStyle='#29242b';ctx.font='bold 15px Arial';ctx.fillText(money.format(quote.unit),126,y+103);
-      ctx.fillStyle='#625a66';ctx.font='bold 12px Arial';ctx.fillText('TOTAL PRICE',26,y+139);
-      ctx.fillStyle='#29242b';ctx.font='bold 15px Arial';
-      const total=money.format(quote.total);
-      ctx.fillText(total.length>23 ? total.slice(0,23) : total,126,y+139);
-      if(total.length>23) ctx.fillText(total.slice(23),126,y+158);
+    ctx.fillStyle = '#28232b'; ctx.font = 'bold 24px Arial'; ctx.fillText('BIDDER PRICE COMPARISON',margin,y+27);
+    y += 45;
+    const cardH = orientation === 'landscape' ? 142 : 175;
+    page.quotes.forEach((quote,index) => {
+      const isWinner = page.first && index === 0;
+      ctx.fillStyle = isWinner ? '#e6f6ec' : '#ffffff';
+      ctx.fillRect(margin,y,W-margin*2,cardH-10);
+      ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin,y,W-margin*2,cardH-10);
+      ctx.fillStyle = isWinner ? '#126b42' : '#65146d';
+      ctx.font = 'bold 23px Arial'; ctx.fillText('L' + (page.quotes.indexOf(quote) + 1 + pageRankOffset(page)),margin+16,y+30);
+      const innerX = margin+82;
+      const contentWidth = W - innerX - margin - 18;
+      ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial';
+      const nameLines = wrapText(ctx,quote.name || 'Unnamed bidder',contentWidth);
+      ctx.fillText(nameLines[0],innerX,y+30);
+      ctx.fillStyle = '#5e5661'; ctx.font = '16px Arial'; ctx.fillText('MODEL',margin+16,y+61);
+      ctx.fillStyle = '#28232b'; ctx.font = '18px Arial';
+      const modelLines = wrapText(ctx,quote.model || '-',contentWidth);
+      ctx.fillText(modelLines[0],innerX,y+61);
+      if (orientation === 'landscape') {
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+100);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+100);
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',W/2+60,y+100);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 19px Arial'; ctx.fillText(money.format(quote.total),W/2+210,y+100);
+      } else {
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('UNIT PRICE',margin+16,y+103);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.unit),innerX,y+103);
+        ctx.fillStyle = '#5e5661'; ctx.font = 'bold 16px Arial'; ctx.fillText('TOTAL PRICE',margin+16,y+142);
+        ctx.fillStyle = '#28232b'; ctx.font = 'bold 21px Arial'; ctx.fillText(money.format(quote.total),innerX,y+142);
+      }
       y += cardH;
     });
-    ctx.fillStyle='#766d78';ctx.font='12px Arial';
-    ctx.fillText('Page ' + pageNumber + ' of ' + pages.length, pad, H-18);
+    ctx.fillStyle = '#746b76'; ctx.font = '16px Arial';
+    ctx.fillText('Page ' + pageNo + ' of ' + pages.length,margin,H-18);
     return canvas;
   }
-  // One 450×1000 portrait image per page keeps the text readable at phone size.
-  for (let i=0; i<pages.length; i++) {
-    const canvas = drawPage(pages[i], i+1);
+  // Keep L1 ranks correct across pages for each item.
+  function pageRankOffset(page) {
+    let offset = 0;
+    for (let i=0;i<pages.length;i++) {
+      if (pages[i] === page) break;
+      if (pages[i].itemIndex === page.itemIndex) offset += pages[i].quotes.length;
+    }
+    return offset;
+  }
+  for (let i=0;i<pages.length;i++) {
+    const canvas = drawPage(pages[i],i+1);
     const link = document.createElement('a');
-    link.download = 'Tender-' + String(record.customerName || 'Result').replace(/[^a-z0-9]+/gi,'-') + '-Page-' + (i+1) + '.png';
+    link.download = 'Tender-' + String(record.customerName || 'Result').replace(/[^a-z0-9]+/gi,'-') + '-' + orientation + '-' + i18nSize(scale) + '-Page-' + (i+1) + '.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
-    await new Promise(resolve => setTimeout(resolve, 350));
+    await new Promise(resolve => setTimeout(resolve,300));
   }
+  function i18nSize(value) { return value === 1 ? 'standard' : value === 1.5 ? 'high' : 'ultra'; }
 }
+
 function renderVisualAnalytics(shown) {
   let host = document.querySelector('#visualAnalytics');
   if (!host) { host = document.createElement('section'); host.id = 'visualAnalytics'; host.className = 'visual-analytics'; document.querySelector('#categoryChart').insertAdjacentElement('afterend', host); }
