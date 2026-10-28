@@ -81,11 +81,11 @@ async function generateImage(record) {
     const quotes = item.analysis.quotes || [];
     // Split quotes only when needed; the complete bidder list is preserved across pages.
     const headerH = orientation === 'landscape' ? 190 : 220;
-    const specsH = orientation === 'landscape' ? 285 : 390;
-    const quoteH = orientation === 'landscape' ? 150 : 185;
-    const topY = headerH + (itemIndex === 0 ? 0 : 0);
-    const firstAvailable = H - topY - specsH - 100;
-    const nextAvailable = H - topY - 100;
+    const specsH = orientation === 'landscape' ? 430 : 470;
+    const quoteH = orientation === 'landscape' ? 142 : 175;
+    const topY = headerH;
+    const firstAvailable = H - (topY + 78 + specsH + 45 + 80);
+    const nextAvailable = H - (topY + 78 + 60 + 45 + 80);
     const firstCapacity = Math.max(1, Math.floor(firstAvailable / quoteH));
     const nextCapacity = Math.max(1, Math.floor(nextAvailable / quoteH));
     if (!quotes.length) pages.push({card,quotes:[],itemIndex,first:true});
@@ -123,8 +123,8 @@ async function generateImage(record) {
     ctx.fillText('Quantity: ' + String(page.card.qty || '-'), margin+18,y+52);
     y += 78;
     if (page.first) {
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(margin,y,W-margin*2,orientation === 'landscape' ? 205 : 330);
-      ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin,y,W-margin*2,orientation === 'landscape' ? 205 : 330);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(margin,y,W-margin*2,orientation === 'landscape' ? 410 : 450);
+      ctx.strokeStyle = '#dce2e9'; ctx.strokeRect(margin,y,W-margin*2,orientation === 'landscape' ? 410 : 450);
       ctx.fillStyle = '#28232b'; ctx.font = 'bold 23px Arial'; ctx.fillText('SPECIFICATIONS',margin+18,y+32);
       const fields = fieldsFor(page.card);
       const labelW = orientation === 'landscape' ? 190 : 190;
@@ -139,7 +139,7 @@ async function generateImage(record) {
         lines.forEach((line,index) => ctx.fillText(line,margin+labelW,sy+index*lineH));
         sy += Math.max(lineH+3, lines.length*lineH+3);
       });
-      y += (orientation === 'landscape' ? 225 : 350);
+      y += (orientation === 'landscape' ? 430 : 470);
     } else {
       ctx.fillStyle = '#ffffff'; ctx.fillRect(margin,y,W-margin*2,45);
       ctx.fillStyle = '#5e5661'; ctx.font = '20px Arial';
