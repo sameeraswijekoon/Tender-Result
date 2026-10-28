@@ -117,3 +117,17 @@ input,select{height:44px!important;padding:10px 12px!important;font-size:15px!im
   .pagination{justify-content:space-between}
   .management-table th:last-child,.management-table td:last-child{min-width:170px}
 }
+
+/* Mobile bidder rows: the old small-screen rule squeezed the row into
+   1fr 1fr 36px, which crushed Unit Price into a sliver. On phones - where
+   readings are actually filled - stack every field full width instead:
+   bidder name with the remove button beside it, then model, unit, total. */
+@media (max-width: 760px) {
+  .bidder-row { grid-template-columns: 1fr 40px; gap: 8px; padding: 10px; border: 1px solid #dce4ed; border-radius: 8px; background: #fbfcfe; }
+  .bidder-row .bidder-name { grid-column: 1; grid-row: 1; }
+  .bidder-row .remove-bidder { grid-column: 2; grid-row: 1; align-self: center; justify-self: center; min-width: 40px; min-height: 40px; }
+  .bidder-row .bidder-model { grid-column: 1 / -1; grid-row: 2; }
+  .bidder-row .bidder-unit { grid-column: 1 / -1; grid-row: 3; }
+  .bidder-row .bidder-total { grid-column: 1 / -1; grid-row: 4; }
+  .bidder-row input { height: 44px; }
+}
